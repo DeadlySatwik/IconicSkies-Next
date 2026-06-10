@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Meta tags for character encoding and responsive viewport -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IconicSkies</title>
+    <link rel="icon" href="assets/icon.png" type="image/png" id="favicon">
+    <link rel="stylesheet" href="style.css">
+    <!-- Google Material Icons import -->
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+
+    <meta name="description" content="IconicSkies - Real-time weather information with beautiful UI">
+
+</head>
+
+<body>
+
+    <!-- Main container for the weather app -->
+    <main class="main-container">
+        <!-- Search input section -->
+        <header class="input-container">
+            <input class="city-input" type="text" placeholder="Search City">
+            <button class="search-btn">
+                <span class="material-symbols-outlined">
+                    search
+                </span>
+            </button>
+        </header>
+
+        <!-- Weather information display section (hidden by default) -->
+        <section class="weather-info" style="display: none;">
+            <!-- Location and date information -->
+            <div class="location-date-container">
+                <!-- Location display -->
+                <div class="location">
+                    <span class="material-symbols-outlined">
+                        location_on
+                    </span>
+                    <h3 class="country-txt">India</h3>
+                    <!-- Add the local time container as a tooltip -->
+                    <div class="local-time-tooltip">
+                        <span class="material-symbols-outlined">schedule</span>
+                        <span class="local-time">--:--:--</span>
+                    </div>
+                </div>
+                <h4 class="current-date-txt regular-txt">Wed, 28 Feb</h4>
+            </div>
+            <!-- Current weather summary -->
+            <div class="weather-summary-container">
+                <img src="assets/weather/clouds.svg" alt="" class="weather-summary-img">
+                <div class="weather-summary-info">
+                    <h1 class="temp-txt">25&degC</h1>
+                    <h3 class="condition-txt regular-txt">Clouds</h3>
+                </div>
+            </div>
+
+            <!-- Weather conditions (humidity and wind) -->
+            <div class="weather-conditions-container">
+                <!-- Humidity information -->
+                <div class="condition-item">
+                    <span class="material-symbols-outlined">
+                        water_drop
+                    </span>
+                    <div class="condition-info">
+                        <h5 class="regular-txt">Humidity</h5>
+                        <h5 class="humidity-value-txt">55%</h5>
+                    </div>
+                </div>
+
+                <!-- Wind speed information -->
+                <div class="condition-item">
+                    <span class="material-symbols-outlined">
+                        air
+                    </span>
+                    <div class="condition-info">
+                        <h5 class="regular-txt">Wind Speed</h5>
+                        <h5 class="wind-value-txt">2M/s</h5>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Weather forecast section -->
+            <div class="forecast-items-container">
+                <!-- Forecast items for next 4 days -->
+                <div class="forecast-item">
+                    <h5 class="forecast-item-date regular-txt">26 Feb</h5>
+                    <img src="assets/weather/thunderstorm.svg" alt="" class="forecast-item-img">
+                    <h5 class="forecast-item-temp">29&degC</h5>
+                </div>
+                <!-- Additional forecast items... -->
+            </div>
+        </section>
+
+        <!-- Initial search prompt section -->
+        <section class="search-city section-message">
+            <img src="assets/message/search-city.png" alt="" class="search-city-img">
+            <div>
+                <h1>Search City</h1>
+                <h4 class="regular-txt">Find out the weather conditions of your city</h4>
+            </div>
+        </section>
+
+        <!-- Error message section for city not found (hidden by default) -->
+        <section class="not-found section-message" style="display: none;">
+            <img src="assets/message/not-found.png" alt="" class="search-city-img">
+            <div>
+                <h1>Search City</h1>
+                <h4 class="regular-txt">Find out the weather conditions of your city</h4>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Time box -->
+    <div class="time-box">
+        <span class="material-symbols-outlined">schedule</span>
+        <span id="current-time">00:00:00</span>
+    </div>
+
+    <!-- Footer section -->
+    <footer>
+        <p>&copy; 2025 DeadlyS. All rights reserved.</p>
+    </footer>
+
+    <!-- JavaScript file link -->
+    <script>
+        // Fallback if config.js is not available
+        if (typeof config === 'undefined') {
+            const config = {
+                WEATHER_API_KEY: ""
+            };
+        }
+    </script>
+    <script src="config.prod.js"></script>
+    <script src="script.js"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,55 @@
+import { z } from "zod";
+
+export const unitsSchema = z.enum(["metric", "imperial"]).default("metric");
+
+export const citySearchSchema = z.object({
+  city: z.string().trim().min(2).max(120),
+  units: unitsSchema,
+});
+
+export const registerSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  email: z.string().trim().email().max(320),
+  password: z.string().min(10).max(128),
+});
+
+export const loginSchema = z.object({
+  email: z.string().trim().email().max(320),
+  password: z.string().min(1).max(128),
+});
+
+export const skyMomentSchema = z.object({
+  cityId: z.string().uuid(),
+  weatherSnapshotId: z.string().uuid(),
+  photoId: z.string().uuid().optional(),
+  note: z.string().trim().max(1200).optional().default(""),
+  attachMockPhoto: z.boolean().optional().default(false),
+});
+
+export const allowedUploadContentTypes = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+] as const;
+
+export const maxUploadSizeBytes = 8 * 1024 * 1024;
+
+export const uploadSignSchema = z.object({
+  fileName: z.string().trim().min(1).max(180),
+  contentType: z.enum(allowedUploadContentTypes),
+  sizeBytes: z.number().int().positive().max(maxUploadSizeBytes),
+  cityId: z.string().uuid().optional(),
+  weatherSnapshotId: z.string().uuid().optional(),
+});
+
+export const uploadCompleteSchema = uploadSignSchema.extend({
+  objectPath: z.string().trim().min(1).max(400),
+  bucket: z.string().trim().max(160).optional(),
+  publicUrl: z.string().url().optional(),
+  isMock: z.boolean().optional().default(false),
+});
+
+export function jsonError(message: string, status = 400) {
+  return Response.json({ ok: false, error: message }, { status });
+}

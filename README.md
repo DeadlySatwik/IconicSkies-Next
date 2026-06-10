@@ -1,76 +1,95 @@
-# IconicSkies a Weather App
+# IconicSkies
 
-A beautiful and intuitive weather application that provides real-time weather information and forecasts with dynamic visual effects.
+IconicSkies is a full-stack weather and Sky Journal app.
 
-## Features
+Core identity: "Remember the sky, not just the weather."
 
-- 🌡️ Real-time weather data
-- 🌅 Dynamic background gradients based on temperature
-- 🕒 Local time display for searched cities
-- 📅 5-day weather forecast
-- 🌍 Global city search
-- 💨 Wind speed and humidity information
-- 🎨 Beautiful UI with animated transitions
-- 📱 Fully responsive design
+The app lets users search weather by city, view current conditions, register/login, save a sky moment with a journal note, attach a mock or GCS-ready sky photo, and revisit saved moments in a dashboard timeline.
 
-## Setup
+## Stack
 
-1. Clone the repository:
+- Next.js App Router
+- TypeScript
+- Tailwind CSS
+- PostgreSQL 18
+- Drizzle ORM plus raw SQL migrations
+- Docker for local PostgreSQL
+- Google Cloud Storage signed upload architecture with mock fallback
+- Playwright smoke tests
+- Sentry scaffolding
+
+## Quick Start
+
 ```bash
-git clone https://github.com/DeadlySatwik/iconicskies.git
+npm install
 
+# Start PostgreSQL 18. If Docker Compose is available:
+docker compose up -d postgres
+
+# If this Docker install has no Compose plugin, use raw Docker:
+docker run --name iconicskies-postgres \
+  -e POSTGRES_DB=iconicskies \
+  -e POSTGRES_USER=iconicskies \
+  -e POSTGRES_PASSWORD=iconicskies \
+  -p 5432:5432 \
+  -d postgres:18
+
+npm run db:migrate
+npm run db:seed
+npm run dev
 ```
 
-2. Set up the configuration:
-   - Copy `config.example.js` to `config.js`
-   - Replace the API key with your OpenWeather API key
+Open `http://localhost:3000`.
 
-```javascript
-const config = {
-    WEATHER_API_KEY: "your_api_key_here"
-};
-```
+Demo login:
 
-3. Get an API key:
-   - Sign up at [OpenWeather](https://openweathermap.org/api)
-   - Generate an API key
-   - Add it to your `config.js`
+- Email: `demo@iconicskies.local`
+- Password: `IconicSkiesDemo123!`
 
-## Technologies Used
+## Environment
 
-- HTML5
-- CSS3
-- JavaScript
-- OpenWeather API
-- Google Material Icons
+Copy `.env.example` to `.env.local` and fill values as needed. Leaving `OPENWEATHER_API_KEY` and GCS variables blank enables mock weather/upload behavior.
 
-## Project Structure
+Do not put secrets in `NEXT_PUBLIC_*` variables.
 
-```
-IconicSkies/
-├── assets/
-│   ├── weather/     # Weather icons
-│   ├── message/     # UI message images
-│   └── icon.png     # Favicon
-├── style.css        # Styles
-├── script.js        # Main JavaScript
-├── config.js        # API configuration
-└── index.html       # Main HTML
-```
+## Google Cloud Storage
 
-## Contributing
+The sky photo bucket should remain private. Keep public access prevention enforced, and do not make the bucket or objects public.
 
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+The server-side GCS service account needs these bucket-level roles:
 
-## License
+- `roles/storage.objectCreator` for signed uploads.
+- `roles/storage.objectViewer` for private server-side photo display.
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details
+The browser must never receive service account credentials. Keep `GCS_PROJECT_ID`, `GCS_CLIENT_EMAIL`, and `GCS_PRIVATE_KEY` in server-side environment variables only.
 
-## Author
+Bucket CORS must allow direct signed uploads:
 
-DeadlyS
+- Include local development, for example `http://localhost:3000`.
+- Include the deployed production app domain.
+- Allow `PUT` requests with the `Content-Type` header.
+- Do not use public bucket access as a workaround for CORS or photo display.
 
-## Acknowledgments
+## Scripts
 
-- OpenWeather API for weather data
-- Google Material Icons for UI elements
+- `npm run dev`
+- `npm run build`
+- `npm run lint`
+- `npm run typecheck`
+- `npm run db:migrate`
+- `npm run db:seed`
+- `npm run test:e2e:install`
+- `npm run test:e2e`
+
+## Documentation
+
+- `PRODUCT.md`
+- `ARCHITECTURE.md`
+- `DESIGN.md`
+- `DATABASE_NOTES.md`
+- `SECURITY.md`
+- `DEPLOYMENT.md`
+- `TODO.md`
+- `BUILD_LOG.md`
+- `HANDOFF.md`
+- `REBUILD_REPORT.md`

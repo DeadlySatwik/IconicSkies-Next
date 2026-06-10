@@ -46,3 +46,26 @@ secrets.json
 dist/
 build/
 out/
+.next/
+.cache/
+playwright-report/
+test-results/
+tsconfig.tsbuildinfo
+.next-dev.log
+.env.local
+
+# Local secrets
+.env
+.env.local
+.env.*.local
+
+# Google Cloud/service account secrets
+service-account*.json
+gcs-key*.json
+google-credentials*.json
+
+# Generated / accidental files
+graphify-out/
+info:-
+.vscode/
+legacy-static/config.prod.js.local
