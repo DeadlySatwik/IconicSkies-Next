@@ -13,11 +13,13 @@ export function SaveMomentForm({
   weatherSnapshotId,
   gcsEnabled,
   signedIn,
+  variant = "default",
 }: {
   cityId: string;
   weatherSnapshotId: string;
   gcsEnabled: boolean;
   signedIn: boolean;
+  variant?: "default" | "cinematic";
 }) {
   const [note, setNote] = useState("");
   const [attachMockPhoto, setAttachMockPhoto] = useState(true);
@@ -25,6 +27,16 @@ export function SaveMomentForm({
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [message, setMessage] = useState("");
   const router = useRouter();
+  const cinematic = variant === "cinematic";
+  const sectionClass = cinematic
+    ? "rounded-2xl border border-skyInk/10 bg-[#eef4f1] p-6 text-skyInk shadow-[0_22px_70px_rgba(0,0,0,0.18)] sm:p-7"
+    : "rounded-xl border border-skyInk/10 bg-cloud p-6 shadow-soft";
+  const primaryButtonClass = cinematic
+    ? "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-skyInk px-5 font-semibold text-cloud transition hover:bg-night focus:outline-none focus:ring-2 focus:ring-horizon/50 disabled:cursor-not-allowed disabled:opacity-70"
+    : "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-skyInk px-5 font-semibold text-cloud hover:bg-night focus:outline-none focus:ring-2 focus:ring-rain disabled:cursor-not-allowed disabled:opacity-70";
+  const inputSurfaceClass = cinematic
+    ? "rounded-xl border border-skyInk/10 bg-white/86 p-4"
+    : "rounded-lg border border-skyInk/10 bg-white p-3";
 
   function validateSelectedFile(file: File) {
     if (!allowedTypes.has(file.type)) {
@@ -156,16 +168,16 @@ export function SaveMomentForm({
 
   if (!signedIn) {
     return (
-      <section className="rounded-xl border border-skyInk/10 bg-cloud p-6 shadow-soft">
+      <section className={sectionClass}>
         <h2 className="text-2xl font-semibold text-skyInk">Save this sky moment</h2>
         <p className="mt-2 text-skyInk/70">
           Sign in to save this weather, add a note, and keep a personal timeline of skies.
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
-          <Link className="rounded-lg bg-skyInk px-4 py-2 font-semibold text-cloud" href="/login">
+          <Link className={cinematic ? "rounded-xl bg-skyInk px-4 py-2 font-semibold text-cloud hover:bg-night" : "rounded-lg bg-skyInk px-4 py-2 font-semibold text-cloud"} href="/login">
             Sign in
           </Link>
-          <Link className="rounded-lg border border-skyInk/20 px-4 py-2 font-semibold" href="/register">
+          <Link className={cinematic ? "rounded-xl border border-skyInk/20 px-4 py-2 font-semibold hover:bg-white/65" : "rounded-lg border border-skyInk/20 px-4 py-2 font-semibold"} href="/register">
             Create account
           </Link>
         </div>
@@ -174,9 +186,9 @@ export function SaveMomentForm({
   }
 
   return (
-    <section className="rounded-xl border border-skyInk/10 bg-cloud p-6 shadow-soft">
+    <section className={sectionClass}>
       <div className="flex items-start gap-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-horizon text-skyInk">
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-horizon text-skyInk">
           <Save aria-hidden className="size-5" />
         </span>
         <div>
@@ -193,7 +205,7 @@ export function SaveMomentForm({
           </label>
           <textarea
             id="moment-note"
-            className="mt-2 min-h-28 w-full rounded-lg border border-skyInk/15 bg-white px-4 py-3 text-skyInk placeholder:text-skyInk/45 focus:border-rain focus:ring-2 focus:ring-rain/25"
+            className="mt-2 min-h-32 w-full rounded-xl border border-skyInk/15 bg-white px-4 py-3 text-skyInk placeholder:text-skyInk/45 focus:border-horizon focus:ring-2 focus:ring-horizon/25"
             value={note}
             onChange={(event) => setNote(event.target.value)}
             maxLength={1200}
@@ -201,14 +213,14 @@ export function SaveMomentForm({
           />
         </div>
         {gcsEnabled ? (
-          <div className="rounded-lg border border-skyInk/10 bg-white p-3">
+          <div className={inputSurfaceClass}>
             <label className="flex items-center gap-3 text-sm font-semibold text-skyInk" htmlFor="sky-photo">
               <Camera aria-hidden className="size-4" />
               Upload sky photo
             </label>
             <input
               id="sky-photo"
-              className="mt-3 block w-full text-sm text-skyInk file:mr-4 file:rounded-md file:border-0 file:bg-skyInk file:px-4 file:py-2 file:font-semibold file:text-cloud hover:file:bg-night focus:outline-none focus:ring-2 focus:ring-rain"
+              className="mt-3 block w-full text-sm text-skyInk file:mr-4 file:rounded-lg file:border-0 file:bg-skyInk file:px-4 file:py-2 file:font-semibold file:text-cloud hover:file:bg-night focus:outline-none focus:ring-2 focus:ring-horizon/40"
               type="file"
               accept="image/jpeg,image/png,image/webp,image/gif"
               onChange={(event) => {
@@ -228,9 +240,9 @@ export function SaveMomentForm({
             <p className="mt-2 text-xs text-skyInk/60">JPG, PNG, WebP, or GIF. Max 8 MB.</p>
           </div>
         ) : (
-          <label className="flex items-center gap-3 rounded-lg border border-skyInk/10 bg-white p-3 text-sm font-medium text-skyInk">
+          <label className="flex items-center gap-3 rounded-xl border border-skyInk/10 bg-white/86 p-4 text-sm font-medium text-skyInk">
             <input
-              className="rounded border-skyInk/30 text-rain focus:ring-rain"
+              className="rounded border-skyInk/30 text-rain focus:ring-horizon"
               type="checkbox"
               checked={attachMockPhoto}
               onChange={(event) => setAttachMockPhoto(event.target.checked)}
@@ -240,7 +252,7 @@ export function SaveMomentForm({
           </label>
         )}
         <button
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-skyInk px-5 font-semibold text-cloud hover:bg-night focus:outline-none focus:ring-2 focus:ring-rain disabled:cursor-not-allowed disabled:opacity-70"
+          className={primaryButtonClass}
           type="submit"
           disabled={status === "saving"}
         >

@@ -2,10 +2,10 @@ import { slugifyCity } from "@/lib/utils";
 import type { WeatherResult, WeatherUnits } from "./types";
 
 const conditions = [
-  { condition: "Clear", description: "golden open sky", iconCode: "01d" },
-  { condition: "Clouds", description: "soft layered clouds", iconCode: "03d" },
-  { condition: "Rain", description: "brief silver rain", iconCode: "10d" },
-  { condition: "Mist", description: "quiet morning haze", iconCode: "50d" },
+  { condition: "Clear", description: "golden open sky", iconCode: "01d", weatherId: 800, cloudiness: 8 },
+  { condition: "Clouds", description: "soft layered clouds", iconCode: "03d", weatherId: 802, cloudiness: 52 },
+  { condition: "Rain", description: "brief silver rain", iconCode: "10d", weatherId: 500, cloudiness: 74 },
+  { condition: "Mist", description: "quiet morning haze", iconCode: "50d", weatherId: 701, cloudiness: 64 },
 ];
 
 function seeded(city: string) {
@@ -41,6 +41,8 @@ export function getMockWeather(cityName: string, units: WeatherUnits): WeatherRe
       condition: weather.condition,
       description: weather.description,
       iconCode: weather.iconCode,
+      weatherId: weather.weatherId,
+      cloudiness: weather.cloudiness,
       comfortLabel: metricTemp > 31 ? "hot" : metricTemp < 8 ? "crisp" : "comfortable",
       capturedAt,
     },

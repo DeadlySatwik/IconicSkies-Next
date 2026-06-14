@@ -42,3 +42,44 @@
 - Schema inspection: `sky_photos` currently has `bucket`, `object_path`, `public_url`, `content_type`, `size_bytes`, and `is_mock`; there are no `signed_url` or `original_filename` columns.
 - Commands run: `npm run typecheck`, `npm run lint`, `npm run build`, `npm run test:e2e`.
 - Quality results: typecheck passed, lint passed, build passed after sandbox escalation for Turbopack, Playwright passed 6/6 on rerun.
+
+## 2026-06-11 - Atmospheric Weather Backgrounds
+
+- Files created: `lib/weather/backgrounds.ts`, `lib/weather/resolve-weather-background.ts`, `components/weather/weather-background.tsx`, `components/layout/landing-background.tsx`, curated assets under `public/backgrounds/`.
+- Files modified: `lib/weather/types.ts`, `lib/weather/service.ts`, `lib/weather/mock.ts`, `app/page.tsx`, `app/city/[slug]/page.tsx`, `tests/e2e/vertical-slice.spec.ts`, `DESIGN.md`, `TODO.md`, `HANDOFF.md`.
+- Major decisions: curated UI backgrounds stay in `public/` instead of GCS because they are app assets, not user content. `default-day` and `default-night` are manifest aliases to existing clear-sky assets, so no extra physical files are required.
+- Compatibility: new weather metadata is optional and stored/read through `weather_snapshots.raw_payload`; no migration was added, and old cached snapshots continue to resolve from condition, description, icon code, and captured time.
+- Landing behavior: image poster loads by default; desktop users can opt into the loop video with a `localStorage` preference; mobile and reduced-motion contexts stay in image mode.
+- Commands run: `npm run typecheck`, `npm run lint`, `npm run build`, `npm run test:e2e`.
+- Quality results: typecheck passed, lint passed, build passed after sandbox escalation for the known Turbopack port-binding restriction, Playwright passed 7/8 with the desktop-only landing video test intentionally skipped on the mobile project.
+
+## 2026-06-11 - Mobile Landing Poster
+
+- Files modified: `components/layout/landing-background.tsx`, `tests/e2e/vertical-slice.spec.ts`, `DESIGN.md`, `BUILD_LOG.md`, `HANDOFF.md`.
+- Landing behavior: screens below 768px now use `/backgrounds/landing/landing-poster-mobile.webp`; desktop and tablet keep `/backgrounds/landing/landing-poster.webp`, and the desktop video toggle remains unchanged.
+- Mobile behavior: mobile continues to force image mode and uses a cover background with a mobile-specific focal position to avoid awkward cropping.
+- Commands run: `npm run typecheck`, `npm run lint`, `npm run build`, `npm run test:e2e`.
+- Quality results: typecheck passed, lint passed, build passed after sandbox escalation for Turbopack, Playwright passed 7/8 with the desktop-only video toggle test intentionally skipped on the mobile project.
+
+## 2026-06-11 - Design Rescue Critique Before Coding
+
+- Visual critique: the landing page still reads as a pale default app layout placed over strong artwork. The typography is large but not elegant, the text shadow muddies the headline, the search bar and Image/Video toggle feel disconnected from the hero, and the saved-moment card uses a washed-out surface that fights the cinematic background.
+- City critique: the mood image is technically present but emotionally sidelined. The current weather card and save form cover most of the page with bulky blocks, so clear, cloud, rain, and mist moods do not register as the page's primary experience.
+- Replacement approach: use fewer, better-composed sections. The landing page becomes one dark cinematic hero with integrated search and a single premium Sky Journal preview. The city page becomes an atmospheric hero band with the key weather reading in the image, followed by solid/semi-solid panels for forecast, metrics, and Save Moment.
+
+## 2026-06-11 - Design Rescue Implementation
+
+- Files modified: `app/page.tsx`, `app/city/[slug]/page.tsx`, `components/layout/site-header.tsx`, `components/layout/landing-background.tsx`, `components/weather/search-panel.tsx`, `components/weather/weather-card.tsx`, `components/sky/save-moment-form.tsx`, `DESIGN.md`, `BUILD_LOG.md`, `HANDOFF.md`.
+- Landing redesign: replaced the pale hero treatment with a dark cinematic composition, integrated the Image/Video toggle into the hero, preserved the functional city search/units/action controls, and reduced the right side to one premium Sky Journal preview.
+- City redesign: moved temperature, condition, location, time, and search into an atmospheric hero band; moved metrics and forecast into elevated solid/semi-solid panels below; kept Save Moment readable with clear textarea, upload/mock fallback, and submit states.
+- Header adjustment: changed the global header to a restrained solid midnight bar so it stays readable on landing/city pages without making dashboard/auth pages depend on translucent artwork.
+- Security/API scope: no database schema, migration, secret, Neon, OpenWeather, GCS upload, private photo display, auth, dashboard data, or API files were changed.
+- Browser inspection: reviewed landing image mode, landing video mode, mobile landing, and city pages for Darjeeling/Tokyo. Iterated once after the first pass because the header was too pale and the city metrics card was too tall.
+- Commands run: pending final verification in this turn.
+
+## 2026-06-12 - DB Outage Fallback Fixes
+
+- Files modified: `app/api/auth/login/route.ts`, `app/api/auth/register/route.ts`, `components/auth/auth-form.tsx`, `lib/db/client.ts`, `lib/weather/service.ts`.
+- Auth fix: login and register now catch local Postgres connection refusal and return clean `503` JSON errors instead of crashing the route and leaving the browser with an empty response body.
+- Weather fix: live weather lookup now keeps rendering weather results even when cache/persist writes cannot reach Postgres, so city pages do not collapse into the generic lookup-failed state just because the database is offline.
+- Browser behavior: verified `/api/auth/login` returns a structured `503` response when `127.0.0.1:5432` is unavailable, and verified `/city/alipurduar?units=metric` still renders weather content instead of the lookup-failed panel.

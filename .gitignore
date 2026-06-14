@@ -69,3 +69,21 @@ graphify-out/
 info:-
 .vscode/
 legacy-static/config.prod.js.local
+
+# Local secrets / credentials
+.env.production
+*.pem
+*.key
+service-account*.json
+gcs-key*.json
+google-credentials*.json
+
+# Local cloud/tooling state
+.gcloud/
+.vercel/
+
+# Local generated artifacts
+output/
+assets-source/
+.cache/
+.next-dev.log

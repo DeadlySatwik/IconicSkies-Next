@@ -12,14 +12,16 @@
 - [x] Phase 8: Add mock/GCS-ready upload architecture.
 - [x] Phase 9: Add smoke tests and run quality gates.
 - [x] Phase 10: Final docs, security notes, and polish.
+- [x] Atmospheric backgrounds: add curated landing/city backgrounds, mood resolution, and smoke coverage.
 
 ## Remaining Hardening
 
 - [ ] Add production-grade rate limiting for auth and weather endpoints.
 - [ ] Add CSRF tokens if the auth model expands beyond SameSite cookie protection.
-- [ ] Add a real GCS photo display strategy for private objects.
+- [x] Add a real GCS photo display strategy for private objects.
 - [ ] Add unit tests around auth, weather normalization, and upload validation.
 - [ ] Add dependency-audit follow-up for npm moderate transitive findings.
+- [ ] Add focused unit tests for weather background mood resolution edge cases.
 
 ## Secondary If Time Allows
 

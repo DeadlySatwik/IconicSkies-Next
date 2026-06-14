@@ -27,3 +27,23 @@ export function getDb() {
 
   return database;
 }
+
+export function isDatabaseConnectionError(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+
+  const candidate = error as {
+    code?: string;
+    errno?: number | string;
+    cause?: { code?: string; errno?: number | string } | null;
+  };
+
+  const codes = [candidate.code, candidate.cause?.code];
+  const errnos = [candidate.errno, candidate.cause?.errno];
+
+  return (
+    codes.includes("ECONNREFUSED") ||
+    codes.includes("28P01") ||
+    codes.includes("invalid_password") ||
+    errnos.includes(-111)
+  );
+}

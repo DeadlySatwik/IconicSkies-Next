@@ -36,9 +36,12 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
       body: JSON.stringify(body),
     });
 
-    const payload = (await response.json()) as { ok?: boolean; error?: string };
-    if (!response.ok || !payload.ok) {
-      setError(payload.error ?? "Authentication failed.");
+    const payload = (response.headers.get("content-type")?.includes("application/json")
+      ? await response.json().catch(() => null)
+      : null) as { ok?: boolean; error?: string } | null;
+
+    if (!response.ok || !payload?.ok) {
+      setError(payload?.error ?? "Authentication failed.");
       setLoading(false);
       return;
     }

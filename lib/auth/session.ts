@@ -3,8 +3,15 @@ import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import { eq, gt, and } from "drizzle-orm";
-import { getDb } from "@/lib/db/client";
+import { getDb, isDatabaseConnectionError } from "@/lib/db/client";
 import { sessions, users } from "@/lib/db/schema";
+import {
+  createFallbackSession,
+  destroyFallbackSession,
+  findFallbackSessionByToken,
+  findFallbackUserById,
+  hasFallbackUser,
+} from "@/lib/dev/fallback-store";
 
 export const SESSION_COOKIE = "iconicskies_session";
 const SESSION_DAYS = 14;
@@ -14,15 +21,22 @@ function hashToken(token: string) {
 }
 
 export async function createSession(userId: string) {
+  if (hasFallbackUser(userId)) return createFallbackSession(userId);
+
   const token = randomBytes(32).toString("base64url");
   const tokenHash = hashToken(token);
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
 
-  await getDb().insert(sessions).values({
-    userId,
-    tokenHash,
-    expiresAt,
-  });
+  try {
+    await getDb().insert(sessions).values({
+      userId,
+      tokenHash,
+      expiresAt,
+    });
+  } catch (error) {
+    if (!isDatabaseConnectionError(error)) throw error;
+    return createFallbackSession(userId);
+  }
 
   return { token, expiresAt };
 }
@@ -55,20 +69,49 @@ export async function getCurrentUser() {
   if (!token) return null;
 
   const tokenHash = hashToken(token);
-  const rows = await getDb()
-    .select({
-      id: users.id,
-      email: users.email,
-      name: users.name,
-      role: users.role,
-      expiresAt: sessions.expiresAt,
-    })
-    .from(sessions)
-    .innerJoin(users, eq(users.id, sessions.userId))
-    .where(and(eq(sessions.tokenHash, tokenHash), gt(sessions.expiresAt, new Date())))
-    .limit(1);
+  try {
+    const rows = await getDb()
+      .select({
+        id: users.id,
+        email: users.email,
+        name: users.name,
+        role: users.role,
+        expiresAt: sessions.expiresAt,
+      })
+      .from(sessions)
+      .innerJoin(users, eq(users.id, sessions.userId))
+      .where(and(eq(sessions.tokenHash, tokenHash), gt(sessions.expiresAt, new Date())))
+      .limit(1);
 
-  return rows[0] ?? null;
+    if (rows[0]) return rows[0];
+
+    const fallbackSession = findFallbackSessionByToken(token);
+    if (!fallbackSession) return null;
+    const fallbackUser = findFallbackUserById(fallbackSession.userId);
+    if (!fallbackUser) return null;
+
+    return {
+      id: fallbackUser.id,
+      email: fallbackUser.email,
+      name: fallbackUser.name,
+      role: fallbackUser.role,
+      expiresAt: fallbackSession.expiresAt,
+    };
+  } catch (error) {
+    if (!isDatabaseConnectionError(error)) throw error;
+    const session = findFallbackSessionByToken(token);
+    if (!session) return null;
+    const user = findFallbackUserById(session.userId);
+    if (!user) return null;
+
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      expiresAt: session.expiresAt,
+    };
+  }
 }
 
 export async function destroyCurrentSession() {
@@ -76,6 +119,11 @@ export async function destroyCurrentSession() {
   const token = cookieStore.get(SESSION_COOKIE)?.value;
   if (!token) return;
 
-  await getDb().delete(sessions).where(eq(sessions.tokenHash, hashToken(token)));
+  try {
+    await getDb().delete(sessions).where(eq(sessions.tokenHash, hashToken(token)));
+  } catch (error) {
+    if (!isDatabaseConnectionError(error)) throw error;
+    destroyFallbackSession(token);
+  }
   await clearSessionCookie();
 }

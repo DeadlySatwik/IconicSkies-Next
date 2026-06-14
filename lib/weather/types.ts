@@ -27,6 +27,11 @@ export type WeatherResult = {
     condition: string;
     description: string | null;
     iconCode: string | null;
+    weatherId?: number | null;
+    cloudiness?: number | null;
+    timezoneOffset?: number | null;
+    sunrise?: string | null;
+    sunset?: string | null;
     comfortLabel: string | null;
     capturedAt: string;
   };

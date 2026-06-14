@@ -1,7 +1,12 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
 import { and, desc, eq, gt } from "drizzle-orm";
-import { getDb } from "@/lib/db/client";
+import { getDb, isDatabaseConnectionError } from "@/lib/db/client";
+import {
+  findFallbackWeatherByCityKey,
+  recordFallbackWeather,
+} from "@/lib/dev/fallback-store";
 import { cities, searchHistory, weatherSnapshots } from "@/lib/db/schema";
 import { normalizeEmail, toNumber } from "@/lib/utils";
 import { getMockWeather } from "./mock";
@@ -9,11 +14,13 @@ import type { ForecastPoint, WeatherResult, WeatherUnits } from "./types";
 
 type OpenWeatherCurrent = {
   name: string;
-  sys?: { country?: string };
+  sys?: { country?: string; sunrise?: number; sunset?: number };
   coord?: { lat?: number; lon?: number };
-  weather?: Array<{ main: string; description: string; icon: string }>;
+  weather?: Array<{ id?: number; main: string; description: string; icon: string }>;
   main?: { temp: number; feels_like?: number; humidity?: number };
   wind?: { speed?: number };
+  clouds?: { all?: number };
+  timezone?: number;
   cod?: number | string;
   message?: string;
 };
@@ -27,6 +34,47 @@ type OpenWeatherForecast = {
 };
 
 const CACHE_MINUTES = 20;
+
+function rawPayloadObject(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
+}
+
+function optionalNumber(value: unknown) {
+  const number = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
+  return Number.isFinite(number) ? number : null;
+}
+
+function optionalIsoDate(value: unknown) {
+  if (typeof value === "string") {
+    const time = new Date(value).getTime();
+    return Number.isFinite(time) ? value : null;
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const milliseconds = value > 10_000_000_000 ? value : value * 1000;
+    return new Date(milliseconds).toISOString();
+  }
+
+  return null;
+}
+
+function weatherMetadataFromRawPayload(value: unknown) {
+  const payload = rawPayloadObject(value);
+  return {
+    weatherId: optionalNumber(payload.weatherId),
+    cloudiness: optionalNumber(payload.cloudiness),
+    timezoneOffset: optionalNumber(payload.timezoneOffset),
+    sunrise: optionalIsoDate(payload.sunrise),
+    sunset: optionalIsoDate(payload.sunset),
+  };
+}
+
+function unixSecondsToIso(value: number | undefined) {
+  return typeof value === "number" && Number.isFinite(value)
+    ? new Date(value * 1000).toISOString()
+    : null;
+}
 
 function normalizeCityName(city: string) {
   return city.trim().replace(/\s+/g, " ");
@@ -57,6 +105,7 @@ async function findCachedWeather(cityName: string, units: WeatherUnits) {
       iconCode: weatherSnapshots.iconCode,
       comfortLabel: weatherSnapshots.comfortLabel,
       capturedAt: weatherSnapshots.capturedAt,
+      rawPayload: weatherSnapshots.rawPayload,
     })
     .from(cities)
     .innerJoin(weatherSnapshots, eq(weatherSnapshots.cityId, cities.id))
@@ -72,6 +121,7 @@ async function findCachedWeather(cityName: string, units: WeatherUnits) {
 
   const row = rows[0];
   if (!row) return null;
+  const weatherMetadata = weatherMetadataFromRawPayload(row.rawPayload);
 
   return {
     city: {
@@ -93,6 +143,11 @@ async function findCachedWeather(cityName: string, units: WeatherUnits) {
       condition: row.condition,
       description: row.description,
       iconCode: row.iconCode,
+      weatherId: weatherMetadata.weatherId,
+      cloudiness: weatherMetadata.cloudiness,
+      timezoneOffset: weatherMetadata.timezoneOffset,
+      sunrise: weatherMetadata.sunrise,
+      sunset: weatherMetadata.sunset,
       comfortLabel: row.comfortLabel,
       capturedAt: row.capturedAt.toISOString(),
     },
@@ -182,7 +237,14 @@ async function persistWeather(result: Omit<WeatherResult, "isMock"> & { isMock: 
       description: result.snapshot.description,
       iconCode: result.snapshot.iconCode,
       capturedAt: new Date(result.snapshot.capturedAt),
-      rawPayload: { isMock: result.isMock },
+      rawPayload: {
+        isMock: result.isMock,
+        weatherId: result.snapshot.weatherId ?? null,
+        cloudiness: result.snapshot.cloudiness ?? null,
+        timezoneOffset: result.snapshot.timezoneOffset ?? null,
+        sunrise: result.snapshot.sunrise ?? null,
+        sunset: result.snapshot.sunset ?? null,
+      },
     })
     .returning();
 
@@ -197,6 +259,45 @@ async function persistWeather(result: Omit<WeatherResult, "isMock"> & { isMock: 
       id: snapshot.id,
       comfortLabel: snapshot.comfortLabel,
     },
+  } satisfies WeatherResult;
+}
+
+function fallbackWeatherToResult(result: Omit<WeatherResult, "isMock"> & { isMock: boolean }) {
+  const persisted = recordFallbackWeather({
+    snapshot: {
+      id: randomUUID(),
+      source: result.snapshot.source,
+      units: result.snapshot.units,
+      temperature: result.snapshot.temperature,
+      feelsLike: result.snapshot.feelsLike,
+      humidity: result.snapshot.humidity,
+      windSpeed: result.snapshot.windSpeed,
+      condition: result.snapshot.condition,
+      description: result.snapshot.description,
+      iconCode: result.snapshot.iconCode,
+      weatherId: result.snapshot.weatherId ?? null,
+      cloudiness: result.snapshot.cloudiness ?? null,
+      timezoneOffset: result.snapshot.timezoneOffset ?? null,
+      sunrise: result.snapshot.sunrise ?? null,
+      sunset: result.snapshot.sunset ?? null,
+      comfortLabel: result.snapshot.comfortLabel,
+      capturedAt: result.snapshot.capturedAt,
+    },
+    city: {
+      name: result.city.name,
+      country: result.city.country,
+      region: result.city.region,
+      lat: result.city.lat,
+      lon: result.city.lon,
+      source: result.snapshot.source,
+    },
+    cityKey: normalizeCityName(result.city.name).toLowerCase(),
+  });
+
+  return {
+    ...result,
+    city: persisted.city,
+    snapshot: persisted.snapshot,
   } satisfies WeatherResult;
 }
 
@@ -216,11 +317,30 @@ export async function getWeatherForCity(
   userId: string | null = null,
 ): Promise<WeatherResult> {
   const city = normalizeCityName(cityName);
+  let databaseUnavailable = false;
 
-  const cached = await findCachedWeather(city, units).catch(() => null);
+  const cached = await findCachedWeather(city, units).catch((error) => {
+    if (!isDatabaseConnectionError(error)) throw error;
+    databaseUnavailable = true;
+    return null;
+  });
   if (cached) {
     if (userId) await persistSearch(city, units, userId, cached.city.id).catch(() => undefined);
     return cached;
+  }
+
+  if (databaseUnavailable) {
+    const fallbackCached = findFallbackWeatherByCityKey(city.toLowerCase(), units);
+    if (fallbackCached) {
+      const result = {
+        city: fallbackCached.city,
+        snapshot: fallbackCached.snapshot,
+        forecast: [],
+        isMock: fallbackCached.snapshot.source === "mock",
+      } satisfies WeatherResult;
+      if (userId) await persistSearch(city, units, userId, fallbackCached.city.id).catch(() => undefined);
+      return result;
+    }
   }
 
   const openWeather = await fetchOpenWeather(city, units).catch((error) => {
@@ -230,8 +350,14 @@ export async function getWeatherForCity(
 
   if (!openWeather) {
     const mock = getMockWeather(city, units);
-    const persisted = await persistWeather(mock).catch(() => mock);
-    if (userId && !persisted.city.id.startsWith("mock-")) {
+    const persisted = databaseUnavailable
+      ? fallbackWeatherToResult(mock)
+      : await persistWeather(mock).catch((error) => {
+          if (!isDatabaseConnectionError(error)) throw error;
+          return fallbackWeatherToResult(mock);
+        });
+
+    if (userId && !databaseUnavailable) {
       await persistSearch(city, units, userId, persisted.city.id).catch(() => undefined);
     }
     return persisted;
@@ -259,6 +385,11 @@ export async function getWeatherForCity(
       condition: weather?.main ?? "Clouds",
       description: weather?.description ?? null,
       iconCode: weather?.icon ?? null,
+      weatherId: weather?.id ?? null,
+      cloudiness: current.clouds?.all ?? null,
+      timezoneOffset: current.timezone ?? null,
+      sunrise: unixSecondsToIso(current.sys?.sunrise),
+      sunset: unixSecondsToIso(current.sys?.sunset),
       comfortLabel: null,
       capturedAt: new Date().toISOString(),
     },
@@ -266,8 +397,16 @@ export async function getWeatherForCity(
     isMock: false,
   };
 
-  const persisted = await persistWeather(result);
-  if (userId) await persistSearch(city, units, userId, persisted.city.id).catch(() => undefined);
+  const persisted = databaseUnavailable
+    ? fallbackWeatherToResult(result)
+    : await persistWeather(result).catch((error) => {
+        if (!isDatabaseConnectionError(error)) throw error;
+        return fallbackWeatherToResult(result);
+      });
+
+  if (userId && !databaseUnavailable) {
+    await persistSearch(city, units, userId, persisted.city.id).catch(() => undefined);
+  }
   return persisted;
 }
 
