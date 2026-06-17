@@ -16,6 +16,41 @@ import {
 import { createMockPhotoForMoment } from "@/lib/gcs/service";
 import { toNumber } from "@/lib/utils";
 
+function rawPayloadObject(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
+}
+
+function optionalNumber(value: unknown) {
+  const number = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
+  return Number.isFinite(number) ? number : null;
+}
+
+function optionalIsoDate(value: unknown) {
+  if (typeof value === "string") {
+    const time = new Date(value).getTime();
+    return Number.isFinite(time) ? value : null;
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const milliseconds = value > 10_000_000_000 ? value : value * 1000;
+    return new Date(milliseconds).toISOString();
+  }
+
+  return null;
+}
+
+function weatherMetadataFromRawPayload(value: unknown) {
+  const payload = rawPayloadObject(value);
+  return {
+    weatherId: optionalNumber(payload.weatherId),
+    cloudiness: optionalNumber(payload.cloudiness),
+    timezoneOffset: optionalNumber(payload.timezoneOffset),
+    sunrise: optionalIsoDate(payload.sunrise),
+    sunset: optionalIsoDate(payload.sunset),
+  };
+}
+
 export async function createSkyMoment(input: {
   userId: string;
   cityId: string;
@@ -103,6 +138,7 @@ export async function listSkyMoments(userId: string) {
         description: weatherSnapshots.description,
         iconCode: weatherSnapshots.iconCode,
         comfortLabel: weatherSnapshots.comfortLabel,
+        rawPayload: weatherSnapshots.rawPayload,
         photoUrl: skyPhotos.publicUrl,
         photoContentType: skyPhotos.contentType,
         isMockPhoto: skyPhotos.isMock,
@@ -115,10 +151,14 @@ export async function listSkyMoments(userId: string) {
       .orderBy(desc(skyMoments.capturedAt))
       .limit(50);
 
-    return rows.map((row) => ({
-      ...row,
-      temperature: toNumber(row.temperature) ?? 0,
-    }));
+    return rows.map((row) => {
+      const { rawPayload: _rawPayload, ...rest } = row;
+      return {
+        ...rest,
+        ...weatherMetadataFromRawPayload(_rawPayload),
+        temperature: toNumber(row.temperature) ?? 0,
+      };
+    });
   } catch (error) {
     if (!isDatabaseConnectionError(error)) throw error;
     return listFallbackMoments(userId);

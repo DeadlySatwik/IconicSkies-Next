@@ -1,13 +1,32 @@
+import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, BookOpen, CloudSun, MapPin } from "lucide-react";
+import { ArrowRight, BookOpen, Clock3, CloudSun, MapPin } from "lucide-react";
 import { LandingBackground } from "@/components/layout/landing-background";
 import { SearchPanel } from "@/components/weather/search-panel";
+import { getCurrentUser } from "@/lib/auth/session";
+import { listSkyMoments } from "@/lib/sky/service";
+import { formatTemperature } from "@/lib/utils";
+import { getWeatherBackground } from "@/lib/weather/backgrounds";
+import { resolveWeatherBackgroundMood } from "@/lib/weather/resolve-weather-background";
+import type { WeatherResult } from "@/lib/weather/types";
 
-export default function HomePage() {
+type LandingMoment = Awaited<ReturnType<typeof listSkyMoments>>[number] & {
+  weatherId?: number | null;
+  cloudiness?: number | null;
+  timezoneOffset?: number | null;
+  sunrise?: string | null;
+  sunset?: string | null;
+};
+
+export default async function HomePage() {
+  const user = await getCurrentUser().catch(() => null);
+  const moments = user ? await listSkyMoments(user.id).catch(() => []) : [];
+  const latestMoment = moments[0] ?? null;
+
   return (
     <main className="bg-[#050c12] text-cloud">
       <section className="relative isolate min-h-[calc(100vh-65px)] overflow-hidden">
-        <div className="mx-auto grid min-h-[calc(100vh-65px)] max-w-6xl items-center gap-12 px-4 py-12 sm:px-6 lg:grid-cols-[1.02fr_0.98fr] lg:py-16">
+        <div className="mx-auto grid min-h-[calc(100vh-65px)] max-w-6xl items-center gap-12 px-4 py-12 sm:px-6 lg:grid-cols-[1.16fr_0.84fr] lg:items-start lg:py-16">
           <div className="max-w-3xl">
             <div className="mb-8">
               <LandingBackground />
@@ -37,50 +56,230 @@ export default function HomePage() {
               </span>
             </div>
           </div>
-          <div className="relative">
-            <div className="absolute -inset-8 -z-10 rounded-[2rem] bg-[radial-gradient(circle_at_50%_20%,rgba(216,138,75,0.20),transparent_24rem)]" />
-            <div className="overflow-hidden rounded-2xl border border-white/16 bg-[#071417]/72 p-5 shadow-[0_34px_110px_rgba(0,0,0,0.42)] backdrop-blur-2xl sm:p-7">
-              <div className="flex items-start justify-between gap-5 border-b border-white/10 pb-5">
-                <div>
-                  <p className="text-sm font-semibold text-aurora">Saved sky moment</p>
-                  <p className="mt-2 text-sm text-cloud/58">Delhi, 6:12 PM</p>
-                </div>
-                <span className="rounded-full border border-horizon/30 bg-horizon/14 px-3 py-1 text-xs font-semibold text-[#ffd8bc]">
-                  Rain
-                </span>
-              </div>
-              <p className="mt-7 max-w-md text-3xl font-semibold leading-tight text-cloud">
-                Unexpected rain before the train, the whole platform turning silver.
-              </p>
-              <p className="mt-5 max-w-md text-sm leading-6 text-cloud/68">
-                Weather search flows straight into a sky note, a photo, and a timeline entry you can
-                revisit long after the forecast expires.
-              </p>
-              <div className="mt-7 grid grid-cols-3 gap-3 text-sm">
-                <div className="rounded-xl bg-white/9 p-3">
-                  <p className="text-cloud/50">Temp</p>
-                  <p className="mt-1 font-semibold text-cloud">24°C</p>
-                </div>
-                <div className="rounded-xl bg-white/9 p-3">
-                  <p className="text-cloud/50">Mood</p>
-                  <p className="mt-1 font-semibold text-cloud">Silver rain</p>
-                </div>
-                <div className="rounded-xl bg-white/9 p-3">
-                  <p className="text-cloud/50">Photo</p>
-                  <p className="mt-1 font-semibold text-cloud">Attached</p>
-                </div>
-              </div>
-              <Link
-                className="mt-7 inline-flex items-center gap-2 rounded-xl bg-cloud px-4 py-3 font-semibold text-skyInk transition hover:bg-white focus:outline-none focus:ring-2 focus:ring-horizon/70"
-                href="/register"
-              >
-                Start your journal
-                <ArrowRight aria-hidden className="size-4" />
-              </Link>
-            </div>
+          <div className="relative lg:ml-auto lg:mt-8 lg:max-w-[29.5rem]">
+            <div className="absolute -inset-8 -z-10 rounded-[2rem] bg-[radial-gradient(circle_at_50%_20%,rgba(216,138,75,0.16),transparent_20rem)]" />
+            <LandingPreview moment={latestMoment} signedIn={Boolean(user)} />
           </div>
         </div>
       </section>
     </main>
   );
+}
+
+function LandingPreview({
+  moment,
+  signedIn,
+}: {
+  moment: LandingMoment | null;
+  signedIn: boolean;
+}) {
+  if (!moment) {
+    return (
+      <div className="overflow-hidden rounded-[1.75rem] border border-white/12 bg-[#071417]/74 shadow-[0_28px_88px_rgba(0,0,0,0.38)] backdrop-blur-2xl">
+        <div className="relative aspect-[4/3] min-h-[18rem] overflow-hidden sm:min-h-[20rem]">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(123,198,164,0.18),transparent_20rem),radial-gradient(circle_at_82%_28%,rgba(216,138,75,0.16),transparent_18rem),linear-gradient(145deg,rgba(7,20,28,0.95)_0%,rgba(7,20,28,0.82)_42%,rgba(11,25,34,0.92)_100%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,12,18,0.10)_0%,rgba(5,12,18,0.62)_100%)]" />
+          <div className="absolute inset-x-5 top-5 flex items-center justify-between gap-4">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/14 bg-white/8 px-3 py-1 text-xs font-semibold text-aurora backdrop-blur-xl sm:text-sm">
+              <CloudSun aria-hidden className="size-4" />
+              Saved sky moment
+            </div>
+            <span className="rounded-full border border-white/14 bg-black/20 px-3 py-1 text-xs font-semibold text-cloud/75 backdrop-blur">
+              Waiting
+            </span>
+          </div>
+          <div className="absolute inset-x-5 bottom-5 max-w-md">
+            <p className="text-sm uppercase tracking-[0.24em] text-cloud/50">Your latest entry</p>
+            <h2 className="mt-3 max-w-[18ch] text-balance text-2xl font-semibold leading-[1.12] text-cloud sm:text-[2.1rem]">
+              The first saved sky becomes the face of your journal.
+            </h2>
+            <p className="mt-3 max-w-sm text-sm leading-6 text-cloud/68">
+              Search a city, save the weather, and the preview will turn into your newest memory.
+            </p>
+          </div>
+        </div>
+        <div className="grid gap-4 px-5 py-4 sm:px-6 sm:py-5">
+          <div>
+            <h3 className="text-base font-semibold text-cloud">Ready when you are</h3>
+            <p className="mt-1 text-sm leading-6 text-cloud/62">
+              {signedIn
+                ? "Save one weather moment and it will appear here with the same sky, place, and note."
+                : "Sign in or create an account to keep your saved skies in one place."}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              className="inline-flex items-center gap-2 rounded-full bg-cloud px-4 py-2.5 text-sm font-semibold text-skyInk transition hover:bg-white focus:outline-none focus:ring-2 focus:ring-horizon/70"
+              href={signedIn ? "/dashboard" : "/register"}
+            >
+              {signedIn ? "Open journal" : "Start your journal"}
+              <ArrowRight aria-hidden className="size-4" />
+            </Link>
+            <span className="text-sm text-cloud/50">Weather-first, memory-second.</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const capturedAt = new Intl.DateTimeFormat("en", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(moment.capturedAt));
+  const note = moment.note?.trim() || moment.description || "Weather snapshot saved.";
+  const photoLabel = moment.photoId ? (moment.isMockPhoto ? "Mock photo" : "Uploaded photo") : null;
+  const photoSrc = moment.photoId ? `/api/photos/${moment.photoId}` : null;
+  const weatherBackground = getWeatherBackground(resolveMomentMood(moment));
+
+  return (
+    <div className="group overflow-hidden rounded-[1.75rem] border border-white/12 bg-[#071417]/76 shadow-[0_30px_92px_rgba(0,0,0,0.40)] backdrop-blur-2xl transition duration-300 lg:hover:-translate-y-0.5 lg:hover:shadow-[0_38px_112px_rgba(0,0,0,0.46)]">
+      <div className="relative isolate aspect-[4/3] min-h-[19rem] overflow-hidden sm:min-h-[20rem]">
+        <Image
+          alt=""
+          className="object-cover"
+          fill
+          priority
+          sizes="(min-width: 1024px) 40vw, 100vw"
+          src={weatherBackground.image}
+        />
+        <div className={`absolute inset-0 ${overlayClassFor(weatherBackground.overlay)}`} />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,12,18,0.12)_0%,rgba(5,12,18,0.44)_55%,rgba(5,12,18,0.88)_100%)]" />
+        <div className="absolute inset-x-5 top-5 flex items-start justify-between gap-4">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/14 bg-black/22 px-3 py-1.5 text-xs font-semibold text-aurora backdrop-blur-xl sm:text-sm">
+            <CloudSun aria-hidden className="size-4" />
+            Saved sky moment
+          </div>
+          <span className="rounded-full border border-white/14 bg-black/22 px-3 py-1.5 text-[0.68rem] font-semibold text-cloud/85 backdrop-blur-xl sm:text-xs">
+            {moment.condition}
+          </span>
+        </div>
+        <div className="absolute inset-x-5 bottom-5 grid gap-4 sm:inset-x-6 sm:bottom-6 sm:grid-cols-[minmax(0,1fr)_9.25rem] sm:items-end lg:grid-cols-[minmax(0,1fr)_10rem]">
+          <div className="min-w-0 max-w-[26rem]">
+            <p className="text-[0.68rem] uppercase tracking-[0.24em] text-cloud/55 sm:text-sm">
+              {moment.cityName}
+              {moment.country ? `, ${moment.country}` : ""}
+            </p>
+            <div className="mt-2.5 flex flex-wrap items-center gap-2 text-xs text-cloud/78 sm:text-sm">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-black/16 px-2.5 py-1.5 backdrop-blur">
+                <Clock3 aria-hidden className="size-4" />
+                {capturedAt}
+              </span>
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-black/16 px-2.5 py-1.5 backdrop-blur">
+                {moment.comfortLabel ?? "Humid"}
+              </span>
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-black/16 px-2.5 py-1.5 text-xs font-semibold text-cloud/90 backdrop-blur">
+                {formatTemperature(moment.temperature, moment.units === "imperial" ? "imperial" : "metric")}
+              </span>
+            </div>
+          </div>
+          {photoSrc ? (
+            <div className="flex flex-col gap-1.5 justify-self-start sm:justify-self-end">
+              <div className="overflow-hidden rounded-[1rem] border border-white/18 bg-black/28 shadow-[0_14px_36px_rgba(0,0,0,0.30)] backdrop-blur-md">
+                <div className="relative aspect-[4/5] w-[6.75rem] sm:w-[7rem]">
+                  <Image
+                    alt={`${moment.cityName} sky photo`}
+                    className="object-cover"
+                    fill
+                    sizes="(min-width: 640px) 112px, 108px"
+                    src={photoSrc}
+                    unoptimized
+                  />
+                </div>
+              </div>
+              <p className="text-[0.68rem] font-medium text-cloud/68 sm:text-xs">
+                Captured for your journal
+              </p>
+            </div>
+          ) : (
+            <div className="justify-self-start sm:justify-self-end">
+              <p className="text-xs text-cloud/68 sm:text-sm">Captured for your journal</p>
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="space-y-4 px-5 py-4 sm:px-6 sm:py-5">
+        <div className="grid gap-2.5">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-aurora">Latest sky moment</p>
+          <h2 className="max-w-[22ch] text-balance text-[1.4rem] font-medium leading-[1.18] text-cloud sm:text-[1.7rem]">
+            {note}
+          </h2>
+        </div>
+        <div className="flex flex-wrap items-center gap-2.5 text-xs text-cloud/68 sm:text-sm">
+          <span className="inline-flex items-center gap-2 rounded-full bg-white/6 px-2.5 py-1.5">
+            <MapPin aria-hidden className="size-4" />
+            {moment.cityName}
+            {moment.country ? `, ${moment.country}` : ""}
+          </span>
+          {photoLabel ? (
+            <span className="inline-flex items-center gap-2 rounded-full bg-white/6 px-2.5 py-1.5">
+              {photoLabel}
+            </span>
+          ) : null}
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            className="inline-flex items-center gap-2 rounded-full bg-cloud px-4 py-2.5 text-sm font-semibold text-skyInk transition hover:bg-white focus:outline-none focus:ring-2 focus:ring-horizon/70"
+            href="/dashboard"
+          >
+            Open journal
+            <ArrowRight aria-hidden className="size-4" />
+          </Link>
+          <span className="text-sm text-cloud/50">Your next memory is waiting in the timeline.</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function overlayClassFor(mode: string) {
+  switch (mode) {
+    case "warm":
+      return "bg-[radial-gradient(circle_at_24%_20%,rgba(216,138,75,0.22),transparent_18rem),radial-gradient(circle_at_84%_18%,rgba(123,198,164,0.12),transparent_16rem),linear-gradient(120deg,rgba(17,28,34,0.78)_0%,rgba(8,17,24,0.48)_44%,rgba(5,12,18,0.84)_100%)]";
+    case "storm":
+      return "bg-[radial-gradient(circle_at_18%_18%,rgba(100,121,160,0.24),transparent_18rem),radial-gradient(circle_at_82%_18%,rgba(216,138,75,0.12),transparent_16rem),linear-gradient(125deg,rgba(7,16,25,0.90)_0%,rgba(10,18,28,0.70)_48%,rgba(4,9,16,0.90)_100%)]";
+    case "mist":
+      return "bg-[radial-gradient(circle_at_18%_20%,rgba(202,222,224,0.20),transparent_18rem),radial-gradient(circle_at_82%_18%,rgba(216,138,75,0.10),transparent_16rem),linear-gradient(125deg,rgba(8,17,22,0.72)_0%,rgba(14,25,31,0.62)_44%,rgba(4,8,12,0.80)_100%)]";
+    case "night":
+      return "bg-[radial-gradient(circle_at_18%_20%,rgba(123,198,164,0.16),transparent_18rem),radial-gradient(circle_at_82%_18%,rgba(255,255,255,0.08),transparent_16rem),linear-gradient(125deg,rgba(3,8,16,0.88)_0%,rgba(7,16,25,0.66)_48%,rgba(2,5,10,0.92)_100%)]";
+    case "soft-light":
+    default:
+      return "bg-[radial-gradient(circle_at_20%_20%,rgba(255,245,230,0.18),transparent_18rem),radial-gradient(circle_at_80%_18%,rgba(123,198,164,0.12),transparent_16rem),linear-gradient(120deg,rgba(7,20,28,0.60)_0%,rgba(9,18,25,0.38)_42%,rgba(5,12,18,0.76)_100%)]";
+  }
+}
+
+function resolveMomentMood(moment: LandingMoment) {
+  return resolveWeatherBackgroundMood({
+    city: {
+      id: "",
+      name: moment.cityName,
+      country: moment.country,
+      region: null,
+      lat: null,
+      lon: null,
+    },
+    snapshot: {
+      id: moment.id,
+      source: moment.isMockPhoto ? "mock" : "openweather",
+      units: moment.units as "metric" | "imperial",
+      temperature: moment.temperature,
+      feelsLike: null,
+      humidity: null,
+      windSpeed: null,
+      condition: moment.condition,
+      description: moment.description,
+      iconCode: moment.iconCode,
+      weatherId: moment.weatherId ?? null,
+      cloudiness: moment.cloudiness ?? null,
+      timezoneOffset: moment.timezoneOffset ?? null,
+      sunrise: moment.sunrise ?? null,
+      sunset: moment.sunset ?? null,
+      comfortLabel: moment.comfortLabel,
+      capturedAt: moment.capturedAt instanceof Date ? moment.capturedAt.toISOString() : moment.capturedAt,
+    },
+    forecast: [],
+    isMock: Boolean(moment.isMockPhoto),
+  } satisfies WeatherResult);
 }

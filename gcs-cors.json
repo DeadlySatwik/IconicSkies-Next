@@ -2,8 +2,9 @@
   {
     "origin": [
       "http://localhost:3000",
+      "http://localhost:3001",
       "https://iconicskies-v2.vercel.app",
-      "https://iconicskies-v2.deadlys.tech"
+      "https://iconicskies.deadlys.tech"
     ],
     "method": ["GET", "PUT", "POST", "OPTIONS"],
     "responseHeader": ["Content-Type", "x-goog-resumable"],
