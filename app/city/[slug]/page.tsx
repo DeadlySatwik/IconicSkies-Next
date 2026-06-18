@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CalendarDays, MapPin } from "lucide-react";
 import { FavoriteLocationControl } from "@/components/favorites/favorite-location-control";
+import { AtmosphericPageShell } from "@/components/layout/atmospheric-page-shell";
 import { SaveMomentForm } from "@/components/sky/save-moment-form";
 import { SearchPanel } from "@/components/weather/search-panel";
 import { WeatherBackground } from "@/components/weather/weather-background";
@@ -56,16 +57,33 @@ export default async function CityPage({
 
   if (!weather) {
     return (
-      <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
-        <div className="rounded-xl border border-danger/20 bg-cloud p-8 shadow-soft">
-          <h1 className="text-3xl font-semibold">Weather lookup failed</h1>
-          <p className="mt-3 text-skyInk/70">
-            Try another city, or configure the local database and mock mode.
-          </p>
-          <div className="mt-6">
-            <SearchPanel compact />
-          </div>
-        </div>
+      <main>
+        <AtmosphericPageShell variant="error">
+          <section className="mx-auto max-w-3xl rounded-2xl border border-white/14 bg-[#09171c]/88 p-6 text-cloud shadow-[0_22px_70px_rgba(0,0,0,0.34)] backdrop-blur-xl sm:p-8">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/16 bg-black/28 px-3 py-1 text-xs font-semibold text-aurora">
+              <MapPin aria-hidden className="size-3.5" />
+              Weather search
+            </div>
+            <h1 className="mt-4 text-3xl font-semibold text-cloud sm:text-4xl">We couldn’t find that sky</h1>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-cloud/78 sm:text-base">
+              Try another city name, check the spelling, or search a nearby place.
+            </p>
+            <div className="mt-6">
+              <SearchPanel compact variant="dark" />
+            </div>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {["Darjeeling", "Delhi", "Tokyo"].map((cityName) => (
+                <Link
+                  className="rounded-full border border-white/14 bg-white/8 px-3 py-1.5 text-sm font-medium text-cloud/88 transition hover:bg-white/12"
+                  href={`/city/${cityName.toLowerCase()}?units=${units}`}
+                  key={cityName}
+                >
+                  {cityName}
+                </Link>
+              ))}
+            </div>
+          </section>
+        </AtmosphericPageShell>
       </main>
     );
   }

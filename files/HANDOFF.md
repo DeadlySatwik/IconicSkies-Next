@@ -128,6 +128,7 @@ Update on 2026-06-18: favorite locations are now implemented. Signed-in users ca
 - Local auth still requires a reachable PostgreSQL instance to sign in, register, create sessions, and save moments. The new behavior improves failure handling; it does not replace the database requirement for authenticated flows.
 - Latest verification on 2026-06-18: `npm run typecheck`, `npm run lint`, `npm run build`, and escalated `npm run test:e2e` passed. Playwright reported 7 passed and 1 skipped, with the skipped test remaining the desktop-only landing video toggle check on the mobile project.
 - Update on 2026-06-18: the favorites polish pass tightened dashboard contrast, improved current-location city resolution so nearby locations fall back to a calmer "Near your location" label when confidence is low, and added a compact landing-page "Use current location" entry point beside the hero search.
+- Update on 2026-06-18: dashboard, journal, and failed city-search states now share a dark atmospheric shell so the app keeps one cinematic weather identity outside the landing and city success pages.
 
 ## Exact Next Steps
 

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CurrentLocationCard } from "@/components/favorites/current-location-card";
 import { FavoriteLocationsGrid } from "@/components/favorites/favorite-locations-grid";
+import { AtmosphericPageShell } from "@/components/layout/atmospheric-page-shell";
 import { SkyTimeline } from "@/components/sky/timeline";
 import { getCurrentUser } from "@/lib/auth/session";
 import {
@@ -30,8 +31,9 @@ export default async function DashboardPage() {
   }));
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-      <section className="mb-8 rounded-xl bg-skyInk p-6 text-cloud shadow-soft sm:p-8">
+    <main>
+      <AtmosphericPageShell>
+      <section className="mb-8 rounded-2xl border border-white/14 bg-[#09171c]/88 p-6 text-cloud shadow-[0_22px_68px_rgba(0,0,0,0.34)] backdrop-blur-xl sm:p-8">
         <p className="text-sm font-semibold text-aurora">Sky Journal timeline</p>
         <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -41,7 +43,7 @@ export default async function DashboardPage() {
               condition, note, and photo context.
             </p>
           </div>
-          <Link className="rounded-lg bg-cloud px-4 py-2 font-semibold text-skyInk" href="/">
+          <Link className="inline-flex items-center justify-center rounded-full bg-cloud px-4 py-2 font-semibold text-skyInk transition hover:bg-mist focus:outline-none focus:ring-2 focus:ring-aurora/40" href="/">
             Search weather
           </Link>
         </div>
@@ -51,6 +53,7 @@ export default async function DashboardPage() {
         <FavoriteLocationsGrid favorites={favoriteLocations} />
         <SkyTimeline moments={timelineMoments} />
       </div>
+      </AtmosphericPageShell>
     </main>
   );
 }

@@ -24,10 +24,10 @@ type Moment = {
 export function SkyTimeline({ moments }: { moments: Moment[] }) {
   if (moments.length === 0) {
     return (
-      <section className="rounded-xl border border-skyInk/10 bg-cloud p-8 text-center shadow-soft">
-        <CloudSun aria-hidden className="mx-auto size-12 text-rain" />
-        <h2 className="mt-4 text-2xl font-semibold">Your Sky Journal is waiting</h2>
-        <p className="mx-auto mt-2 max-w-xl text-skyInk/70">
+      <section className="rounded-2xl border border-white/14 bg-[#09171c]/88 p-8 text-center text-cloud shadow-[0_18px_44px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+        <CloudSun aria-hidden className="mx-auto size-12 text-aurora" />
+        <h2 className="mt-4 text-2xl font-semibold text-cloud">Your Sky Journal is waiting</h2>
+        <p className="mx-auto mt-2 max-w-xl text-cloud/78">
           Search a city, save the weather, and write the first note in your timeline.
         </p>
       </section>
@@ -48,13 +48,13 @@ export function SkyTimeline({ moments }: { moments: Moment[] }) {
           <article
             className={
               hasPhoto
-                ? "grid gap-4 rounded-xl border border-skyInk/10 bg-cloud p-4 shadow-soft md:grid-cols-[minmax(180px,240px)_1fr]"
-                : "rounded-xl border border-skyInk/10 bg-cloud p-4 shadow-soft"
+                ? "grid gap-4 rounded-2xl border border-white/14 bg-[#09171c]/88 p-4 text-cloud shadow-[0_18px_44px_rgba(0,0,0,0.28)] backdrop-blur-xl md:grid-cols-[minmax(180px,240px)_1fr]"
+                : "rounded-2xl border border-white/14 bg-[#09171c]/88 p-4 text-cloud shadow-[0_18px_44px_rgba(0,0,0,0.28)] backdrop-blur-xl"
             }
             key={moment.id}
           >
             {photoSrc ? (
-              <div className="relative aspect-[4/3] min-h-40 overflow-hidden rounded-lg bg-mist md:aspect-auto md:h-full">
+              <div className="relative aspect-[4/3] min-h-40 overflow-hidden rounded-xl bg-[#071417] md:aspect-auto md:h-full">
                 <Image
                   src={photoSrc}
                   alt=""
@@ -67,7 +67,7 @@ export function SkyTimeline({ moments }: { moments: Moment[] }) {
             ) : null}
             <div className="flex flex-col justify-between gap-5">
               <div>
-                <div className="flex flex-wrap items-center gap-3 text-sm text-skyInk/65">
+                <div className="flex flex-wrap items-center gap-3 text-sm text-cloud/76">
                   <span className="inline-flex items-center gap-1.5">
                     <MapPin aria-hidden className="size-4" />
                     {moment.cityName}
@@ -83,27 +83,27 @@ export function SkyTimeline({ moments }: { moments: Moment[] }) {
                     }).format(moment.capturedAt)}
                   </span>
                   {moment.favoriteLabel ? (
-                    <span className="rounded-full bg-aurora/18 px-2 py-1 text-xs font-semibold text-skyInk">
+                    <span className="rounded-full border border-aurora/20 bg-aurora/14 px-2 py-1 text-xs font-semibold text-cloud">
                       {moment.favoriteLabel}
                     </span>
                   ) : null}
                   {hasPhoto ? (
-                    <span className="rounded-full bg-horizon/25 px-2 py-1 text-xs font-semibold text-skyInk">
+                    <span className="rounded-full border border-white/12 bg-white/8 px-2 py-1 text-xs font-semibold text-cloud/90">
                       {moment.isMockPhoto ? "Mock photo" : "Uploaded photo"}
                     </span>
                   ) : null}
                 </div>
-                <h2 className="mt-3 text-2xl font-semibold text-skyInk">
+                <h2 className="mt-3 text-2xl font-semibold text-cloud">
                   {moment.condition} at{" "}
                   {formatTemperature(moment.temperature, moment.units === "imperial" ? "imperial" : "metric")}
                 </h2>
-                <p className="mt-1 text-sm text-skyInk/65">
+                <p className="mt-1 text-sm text-cloud/74">
                   {moment.description ?? moment.comfortLabel ?? "Weather snapshot saved."}
                 </p>
                 {moment.note ? (
-                  <p className="mt-4 max-w-2xl text-lg leading-8 text-skyInk">{moment.note}</p>
+                  <p className="mt-4 max-w-2xl text-lg leading-8 text-cloud">{moment.note}</p>
                 ) : (
-                  <p className="mt-4 text-skyInk/55">No note yet.</p>
+                  <p className="mt-4 text-cloud/62">No note yet.</p>
                 )}
               </div>
             </div>

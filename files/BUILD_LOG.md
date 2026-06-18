@@ -102,3 +102,11 @@
 - Privacy behavior: current-location preview remains ephemeral, and the preview endpoint still exposes no coordinates or secrets to the browser.
 - Commands run: `npm run typecheck`, `npm run lint`, `npm run build`.
 - Quality results: typecheck passed, lint passed after renaming the current-location click handler, and the production build passed.
+
+## 2026-06-18 - Dashboard and Error-State Atmospheric Shell
+
+- Files modified: `components/layout/atmospheric-page-shell.tsx`, `app/dashboard/page.tsx`, `app/city/[slug]/page.tsx`, `components/sky/timeline.tsx`, `files/DESIGN.md`, `files/BUILD_LOG.md`, `files/HANDOFF.md`.
+- Major decisions: unify dashboard, journal, and failed city-search states under a dark atmospheric shell so the app reads as one system; keep the failed-search state calm, compact, and searchable instead of a pale empty page.
+- Visual behavior: dashboard hero, My Places, and timeline cards now use dark premium surfaces; the failed search page uses a centered error card with quick city suggestions and the existing search panel.
+- Commands run: `npm run typecheck`, `npm run lint`, `npm run build`, `npm run test:e2e` with sandbox escalation for local web-server startup.
+- Quality results: typecheck passed, lint passed, production build passed, and Playwright passed 7/8 with the desktop-only landing video check skipped on the mobile project.

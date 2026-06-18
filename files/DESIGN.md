@@ -41,6 +41,7 @@ The product should not feel like a generic dark template. The visual language sh
 - Landing layering uses the poster/video first, then deep navy/dusk gradients to preserve artwork while keeping the headline and search readable.
 - City layering uses condition-specific mood images in the hero only, then transitions into solid/semi-solid panels so the weather mood registers without sacrificing form readability.
 - Video mode remains a desktop enhancement: muted, looping, `playsInline`, `preload="metadata"`, and poster fallback if playback fails.
+- Non-city app surfaces such as dashboard, journal, and failed lookup states use a shared atmospheric shell: dark navy gradients, subtle radial highlights, and compact readable surfaces. This keeps the journal experience aligned with the landing and city pages without loading weather backgrounds where they are not needed.
 
 ## Favorite Locations
 

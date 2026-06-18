@@ -218,7 +218,7 @@ export function FavoriteLocationControl({
         <label className="block">
           <span className="mb-2 block text-sm font-medium text-cloud/90">Favorite label</span>
           <input
-            className="min-h-12 w-full rounded-xl border border-white/14 bg-[#0b1a20]/92 px-4 text-sm text-cloud placeholder:text-cloud/66 focus:border-aurora focus:ring-2 focus:ring-aurora/20"
+            className="min-h-12 w-full rounded-xl border border-white/14 bg-[#0b1a20]/92 px-4 text-sm text-slate-950 placeholder:text-slate-500 disabled:text-slate-700 disabled:placeholder:text-slate-500 disabled:opacity-100 focus:border-aurora focus:ring-2 focus:ring-aurora/20"
             maxLength={120}
             placeholder="Home, Hostel, Work..."
             value={label}

@@ -69,7 +69,7 @@ export function FavoriteLocationActions({
       {editing ? (
         <div className="flex flex-wrap items-center gap-2">
           <input
-            className="min-h-10 w-full min-w-[10rem] flex-1 rounded-lg border border-white/14 bg-[#0b1a20]/92 px-3 text-sm text-cloud placeholder:text-cloud/66 focus:border-aurora focus:ring-2 focus:ring-aurora/20"
+            className="min-h-10 w-full min-w-[10rem] flex-1 rounded-lg border border-white/14 bg-[#0b1a20]/92 px-3 text-sm text-slate-950 placeholder:text-slate-500 disabled:text-slate-700 disabled:placeholder:text-slate-500 disabled:opacity-100 focus:border-aurora focus:ring-2 focus:ring-aurora/20"
             maxLength={120}
             value={label}
             onChange={(event) => setLabel(event.target.value)}
