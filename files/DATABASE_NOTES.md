@@ -18,6 +18,15 @@ The schema intentionally uses PostgreSQL 18 features through raw SQL migrations 
 - Search history by user and searched time.
 - Sky Journal timeline by user and captured time.
 - Favorite city lookup by user and city.
+- Favorite location lookup by user, label, and city identity, with optional rounded coordinates for privacy.
+- Current-location preview does not persist until the user explicitly saves it as a favorite.
+
+## Favorite Locations
+
+- `favorite_locations` is the source of truth for the new favorites feature slice.
+- Rows are owned by one user, carry a display label, and store city identity plus optional rounded lat/lon.
+- Uniqueness is enforced on a per-user location key so duplicate favorites for the same city or coordinate identity and label are avoided.
+- `favorite_cities` is intentionally left legacy-only and unchanged.
 
 ## Local Commands
 

@@ -20,6 +20,8 @@ Update on 2026-06-11: the landing and city pages received a design rescue pass. 
 
 Update on 2026-06-12: auth and weather now degrade more cleanly when the local database is unavailable. Login/register return structured `503` JSON errors instead of crashing, and city weather pages can still render live/mock weather even if cache/persist database writes fail.
 
+Update on 2026-06-18: favorite locations are now implemented. Signed-in users can save private labeled places like Home, Hostel, or Work, view up to 6 live weather preview cards, preview the current location only after clicking a button, and mark matching Sky Journal moments with a favorite pill. Current-location coordinates stay ephemeral until the user explicitly saves them, and saved coordinates are rounded to preserve privacy.
+
 ## Completed Work
 
 - Created planning and continuity docs.
@@ -36,6 +38,7 @@ Update on 2026-06-12: auth and weather now degrade more cleanly when the local d
 - Added protected server-side display for private GCS photos without making the bucket public.
 - Added atmospheric landing/weather backgrounds using public curated assets and backward-compatible weather mood resolution.
 - Redesigned landing and city weather pages around a premium cinematic weather/Sky Journal composition while preserving search, save, upload, auth, dashboard, and API behavior.
+- Added favorite locations with custom labels, current-location preview, live dashboard weather cards, and favorite markers on the Sky Journal timeline.
 - Hardened auth and weather behavior for local Postgres outages without changing schema, auth model, or API shapes for successful requests.
 
 ## Files Created
@@ -62,6 +65,7 @@ Update on 2026-06-12: auth and weather now degrade more cleanly when the local d
 - `docker-compose.yml`
 - `playwright.config.ts`
 - `REBUILD_REPORT.md`
+- `migrations/0002_favorite_locations.sql`
 
 ## Files Modified
 
@@ -76,6 +80,12 @@ Update on 2026-06-12: auth and weather now degrade more cleanly when the local d
 - `DATABASE_NOTES.md`
 - `SECURITY.md`
 - `DEPLOYMENT.md`
+- `files/DESIGN.md`
+- `files/ARCHITECTURE.md`
+- `files/DATABASE_NOTES.md`
+- `files/BUILD_LOG.md`
+- `files/HANDOFF.md`
+- `files/TODO.md`
 
 ## Commands Run
 
@@ -116,6 +126,8 @@ Update on 2026-06-12: auth and weather now degrade more cleanly when the local d
 - Latest mobile poster verification on 2026-06-11: `npm run typecheck`, `npm run lint`, escalated `npm run build`, and escalated `npm run test:e2e` passed. Playwright reported 7 passed and 1 skipped because the landing video toggle is desktop-only.
 - Design rescue browser inspection used local Playwright screenshots for landing image mode, landing video mode, mobile landing, and city weather pages. First pass was iterated because the header blended too pale and city metric cards were too tall above the fold.
 - Local auth still requires a reachable PostgreSQL instance to sign in, register, create sessions, and save moments. The new behavior improves failure handling; it does not replace the database requirement for authenticated flows.
+- Latest verification on 2026-06-18: `npm run typecheck`, `npm run lint`, `npm run build`, and escalated `npm run test:e2e` passed. Playwright reported 7 passed and 1 skipped, with the skipped test remaining the desktop-only landing video toggle check on the mobile project.
+- Update on 2026-06-18: the favorites polish pass tightened dashboard contrast, improved current-location city resolution so nearby locations fall back to a calmer "Near your location" label when confidence is low, and added a compact landing-page "Use current location" entry point beside the hero search.
 
 ## Exact Next Steps
 
@@ -126,6 +138,7 @@ Update on 2026-06-12: auth and weather now degrade more cleanly when the local d
 5. Configure GCS bucket CORS for direct browser uploads if it is not already set.
 6. If original filenames should appear in the UI later, add an explicit migration for `sky_photos.original_filename`.
 7. Add focused unit coverage for weather mood resolution edge cases if the resolver grows more complex.
+8. Consider unit tests for favorite-location identity matching and current-location privacy behavior if the slice is extended further.
 
 ## Resume Prompt
 

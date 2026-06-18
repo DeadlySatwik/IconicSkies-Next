@@ -50,6 +50,27 @@ export const uploadCompleteSchema = uploadSignSchema.extend({
   isMock: z.boolean().optional().default(false),
 });
 
+export const favoriteLocationCreateSchema = z.object({
+  label: z.string().trim().max(120).optional(),
+  cityId: z.string().uuid().optional(),
+  cityName: z.string().trim().min(1).max(160),
+  country: z.string().trim().max(80).optional().nullable(),
+  region: z.string().trim().max(120).optional().nullable(),
+  latitude: z.number().finite().min(-90).max(90).optional().nullable(),
+  longitude: z.number().finite().min(-180).max(180).optional().nullable(),
+  unitsPreference: unitsSchema.optional().nullable(),
+});
+
+export const favoriteLocationUpdateSchema = z.object({
+  label: z.string().trim().min(1).max(120),
+});
+
+export const geoWeatherPreviewSchema = z.object({
+  latitude: z.number().finite().min(-90).max(90),
+  longitude: z.number().finite().min(-180).max(180),
+  units: unitsSchema.optional().default("metric"),
+});
+
 export function jsonError(message: string, status = 400) {
   return Response.json({ ok: false, error: message }, { status });
 }

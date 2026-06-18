@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, BookOpen, Clock3, CloudSun, MapPin } from "lucide-react";
 import { LandingBackground } from "@/components/layout/landing-background";
+import { CurrentLocationEntry } from "@/components/layout/current-location-entry";
 import { SearchPanel } from "@/components/weather/search-panel";
 import { getCurrentUser } from "@/lib/auth/session";
 import { listSkyMoments } from "@/lib/sky/service";
@@ -44,6 +45,9 @@ export default async function HomePage() {
             </p>
             <div className="mt-8">
               <SearchPanel variant="hero" />
+            </div>
+            <div className="mt-4 max-w-3xl">
+              <CurrentLocationEntry units="metric" />
             </div>
             <div className="mt-6 flex flex-wrap gap-x-5 gap-y-3 text-sm font-medium text-cloud/72">
               <span className="inline-flex items-center gap-2">

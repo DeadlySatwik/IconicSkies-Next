@@ -10,6 +10,7 @@ import {
 import { cities, searchHistory, weatherSnapshots } from "@/lib/db/schema";
 import { normalizeEmail, toNumber } from "@/lib/utils";
 import { getMockWeather } from "./mock";
+import type { CurrentLocationResolution } from "./current-location";
 import type { ForecastPoint, WeatherResult, WeatherUnits } from "./types";
 
 type OpenWeatherCurrent = {
@@ -31,6 +32,11 @@ type OpenWeatherForecast = {
     main: { temp: number };
     weather: Array<{ main: string; icon: string }>;
   }>;
+};
+
+type OpenWeatherPayload = {
+  current: OpenWeatherCurrent;
+  forecast: OpenWeatherForecast;
 };
 
 const CACHE_MINUTES = 20;
@@ -78,6 +84,125 @@ function unixSecondsToIso(value: number | undefined) {
 
 function normalizeCityName(city: string) {
   return city.trim().replace(/\s+/g, " ");
+}
+
+function haversineDistanceKm(
+  latitudeA: number,
+  longitudeA: number,
+  latitudeB: number,
+  longitudeB: number,
+) {
+  const rad = Math.PI / 180;
+  const dLat = (latitudeB - latitudeA) * rad;
+  const dLon = (longitudeB - longitudeA) * rad;
+  const lat1 = latitudeA * rad;
+  const lat2 = latitudeB * rad;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+async function findNearestStoredCity(latitude: number, longitude: number) {
+  const rows = await getDb()
+    .select({
+      name: cities.name,
+      country: cities.country,
+      region: cities.region,
+      lat: cities.lat,
+      lon: cities.lon,
+    })
+    .from(cities);
+
+  let nearest:
+    | {
+        name: string;
+        country: string | null;
+        region: string | null;
+        distanceKm: number;
+      }
+    | null = null;
+
+  for (const row of rows) {
+    const lat = toNumber(row.lat);
+    const lon = toNumber(row.lon);
+    if (lat === null || lon === null) continue;
+
+    const distanceKm = haversineDistanceKm(latitude, longitude, lat, lon);
+    if (!nearest || distanceKm < nearest.distanceKm) {
+      nearest = {
+        name: row.name,
+        country: row.country,
+        region: row.region,
+        distanceKm,
+      };
+    }
+  }
+
+  return nearest;
+}
+
+export async function resolveCurrentLocationResolution(
+  latitude: number,
+  longitude: number,
+  input?: {
+    currentName?: string | null;
+    country?: string | null;
+    region?: string | null;
+  },
+): Promise<CurrentLocationResolution> {
+  const currentName = normalizeCityName(input?.currentName ?? "");
+  const nearest = await findNearestStoredCity(latitude, longitude).catch(() => null);
+
+  if (nearest) {
+    if (currentName && normalizeCityName(nearest.name).toLowerCase() === currentName.toLowerCase()) {
+      return {
+        displayName: nearest.name,
+        resolvedName: nearest.name,
+        confidence: "high",
+        country: nearest.country ?? input?.country ?? null,
+        region: nearest.region ?? input?.region ?? null,
+      };
+    }
+
+    if (nearest.distanceKm <= 5) {
+      return {
+        displayName: nearest.name,
+        resolvedName: nearest.name,
+        confidence: "high",
+        country: nearest.country ?? input?.country ?? null,
+        region: nearest.region ?? input?.region ?? null,
+      };
+    }
+
+    if (nearest.distanceKm <= 20) {
+      return {
+        displayName: `Near ${nearest.name}`,
+        resolvedName: nearest.name,
+        confidence: "medium",
+        country: nearest.country ?? input?.country ?? null,
+        region: nearest.region ?? input?.region ?? null,
+      };
+    }
+  }
+
+  if (currentName.length > 0) {
+    return {
+      displayName: "Near your location",
+      resolvedName: currentName,
+      confidence: "low",
+      country: input?.country ?? null,
+      region: input?.region ?? null,
+    };
+  }
+
+  return {
+    displayName: "Near your location",
+    resolvedName: "Near your location",
+    confidence: "low",
+    country: input?.country ?? null,
+    region: input?.region ?? null,
+  };
 }
 
 async function findCachedWeather(cityName: string, units: WeatherUnits) {
@@ -166,6 +291,24 @@ async function fetchOpenWeather(city: string, units: WeatherUnits) {
     units,
   });
 
+  return fetchOpenWeatherByParams(params);
+}
+
+async function fetchOpenWeatherByCoordinates(lat: number, lon: number, units: WeatherUnits) {
+  const key = process.env.OPENWEATHER_API_KEY;
+  if (!key) return null;
+
+  const params = new URLSearchParams({
+    lat: String(lat),
+    lon: String(lon),
+    appid: key,
+    units,
+  });
+
+  return fetchOpenWeatherByParams(params);
+}
+
+async function fetchOpenWeatherByParams(params: URLSearchParams): Promise<OpenWeatherPayload> {
   const [currentResponse, forecastResponse] = await Promise.all([
     fetch(`https://api.openweathermap.org/data/2.5/weather?${params}`, {
       next: { revalidate: 60 },
@@ -262,6 +405,61 @@ async function persistWeather(result: Omit<WeatherResult, "isMock"> & { isMock: 
   } satisfies WeatherResult;
 }
 
+function weatherResultFromOpenWeather(
+  payload: OpenWeatherPayload,
+  units: WeatherUnits,
+  cityNameFallback: string,
+  source: "openweather" | "mock" = "openweather",
+): WeatherResult {
+  const current = payload.current;
+  const weather = current.weather?.[0];
+
+  return {
+    city: {
+      id: "",
+      name: current.name || cityNameFallback,
+      country: current.sys?.country ?? null,
+      region: null,
+      lat: current.coord?.lat ?? null,
+      lon: current.coord?.lon ?? null,
+    },
+    snapshot: {
+      id: "",
+      source,
+      units,
+      temperature: current.main?.temp ?? 0,
+      feelsLike: current.main?.feels_like ?? null,
+      humidity: current.main?.humidity ?? null,
+      windSpeed: current.wind?.speed ?? null,
+      condition: weather?.main ?? "Clouds",
+      description: weather?.description ?? null,
+      iconCode: weather?.icon ?? null,
+      weatherId: weather?.id ?? null,
+      cloudiness: current.clouds?.all ?? null,
+      timezoneOffset: current.timezone ?? null,
+      sunrise: unixSecondsToIso(current.sys?.sunrise),
+      sunset: unixSecondsToIso(current.sys?.sunset),
+      comfortLabel: null,
+      capturedAt: new Date().toISOString(),
+    },
+    forecast: forecastFromOpenWeather(payload.forecast),
+    isMock: source === "mock",
+  };
+}
+
+function weatherResultFromMock(cityName: string, units: WeatherUnits, latitude?: number | null, longitude?: number | null) {
+  const mock = getMockWeather(cityName, units);
+  return {
+    ...mock,
+    city: {
+      ...mock.city,
+      name: cityName,
+      lat: latitude ?? mock.city.lat,
+      lon: longitude ?? mock.city.lon,
+    },
+  } satisfies WeatherResult;
+}
+
 function fallbackWeatherToResult(result: Omit<WeatherResult, "isMock"> & { isMock: boolean }) {
   const persisted = recordFallbackWeather({
     snapshot: {
@@ -311,6 +509,85 @@ async function persistSearch(query: string, units: WeatherUnits, userId: string 
   });
 }
 
+export async function getWeatherPreviewByCity(cityName: string, units: WeatherUnits) {
+  const city = normalizeCityName(cityName);
+  const openWeather = await fetchOpenWeather(city, units).catch((error) => {
+    if (process.env.OPENWEATHER_API_KEY) throw error;
+    return null;
+  });
+
+  if (!openWeather) {
+    const mock = weatherResultFromMock(city, units);
+    return mock;
+  }
+
+  return weatherResultFromOpenWeather(openWeather, units, city);
+}
+
+export async function getWeatherPreviewByCoordinatesWithLocation(
+  latitude: number,
+  longitude: number,
+  units: WeatherUnits,
+) {
+  const openWeather = await fetchOpenWeatherByCoordinates(latitude, longitude, units).catch((error) => {
+    if (process.env.OPENWEATHER_API_KEY) throw error;
+    return null;
+  });
+
+  if (!openWeather) {
+    const location = await resolveCurrentLocationResolution(latitude, longitude).catch(() => ({
+      displayName: "Near your location",
+      resolvedName: "Near your location",
+      confidence: "low" as const,
+      country: null,
+      region: null,
+    }));
+    return {
+      weather: weatherResultFromMock(location.displayName, units, latitude, longitude),
+      location,
+    };
+  }
+
+  const location = await resolveCurrentLocationResolution(latitude, longitude, {
+    currentName: openWeather.current.name ?? null,
+    country: openWeather.current.sys?.country ?? null,
+    region: null,
+  }).catch(() => ({
+    displayName: openWeather.current.name || "Near your location",
+    resolvedName: openWeather.current.name || "Near your location",
+    confidence: "low" as const,
+    country: openWeather.current.sys?.country ?? null,
+    region: null,
+  }));
+
+  const weather = weatherResultFromOpenWeather(
+    openWeather,
+    units,
+    location.displayName,
+  );
+
+  return {
+    weather: {
+      ...weather,
+      city: {
+        ...weather.city,
+        name: location.displayName,
+        country: location.country ?? weather.city.country,
+        region: location.region ?? weather.city.region,
+      },
+    },
+    location,
+  };
+}
+
+export async function getWeatherPreviewByCoordinates(
+  latitude: number,
+  longitude: number,
+  units: WeatherUnits,
+) {
+  return (await getWeatherPreviewByCoordinatesWithLocation(latitude, longitude, units)).weather;
+}
+
 export async function getWeatherForCity(
   cityName: string,
   units: WeatherUnits,
@@ -343,18 +620,17 @@ export async function getWeatherForCity(
     }
   }
 
-  const openWeather = await fetchOpenWeather(city, units).catch((error) => {
+  const preview = await getWeatherPreviewByCity(city, units).catch((error) => {
     if (process.env.OPENWEATHER_API_KEY) throw error;
-    return null;
+    return weatherResultFromMock(city, units);
   });
 
-  if (!openWeather) {
-    const mock = getMockWeather(city, units);
+  if (preview.isMock) {
     const persisted = databaseUnavailable
-      ? fallbackWeatherToResult(mock)
-      : await persistWeather(mock).catch((error) => {
+      ? fallbackWeatherToResult(preview)
+      : await persistWeather(preview).catch((error) => {
           if (!isDatabaseConnectionError(error)) throw error;
-          return fallbackWeatherToResult(mock);
+          return fallbackWeatherToResult(preview);
         });
 
     if (userId && !databaseUnavailable) {
@@ -363,39 +639,7 @@ export async function getWeatherForCity(
     return persisted;
   }
 
-  const current = openWeather.current;
-  const weather = current.weather?.[0];
-  const result: WeatherResult = {
-    city: {
-      id: "",
-      name: current.name || city,
-      country: current.sys?.country ?? null,
-      region: null,
-      lat: current.coord?.lat ?? null,
-      lon: current.coord?.lon ?? null,
-    },
-    snapshot: {
-      id: "",
-      source: "openweather",
-      units,
-      temperature: current.main?.temp ?? 0,
-      feelsLike: current.main?.feels_like ?? null,
-      humidity: current.main?.humidity ?? null,
-      windSpeed: current.wind?.speed ?? null,
-      condition: weather?.main ?? "Clouds",
-      description: weather?.description ?? null,
-      iconCode: weather?.icon ?? null,
-      weatherId: weather?.id ?? null,
-      cloudiness: current.clouds?.all ?? null,
-      timezoneOffset: current.timezone ?? null,
-      sunrise: unixSecondsToIso(current.sys?.sunrise),
-      sunset: unixSecondsToIso(current.sys?.sunset),
-      comfortLabel: null,
-      capturedAt: new Date().toISOString(),
-    },
-    forecast: forecastFromOpenWeather(openWeather.forecast),
-    isMock: false,
-  };
+  const result = preview;
 
   const persisted = databaseUnavailable
     ? fallbackWeatherToResult(result)

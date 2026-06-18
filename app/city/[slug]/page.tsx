@@ -2,11 +2,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CalendarDays, MapPin } from "lucide-react";
+import { FavoriteLocationControl } from "@/components/favorites/favorite-location-control";
 import { SaveMomentForm } from "@/components/sky/save-moment-form";
 import { SearchPanel } from "@/components/weather/search-panel";
 import { WeatherBackground } from "@/components/weather/weather-background";
 import { WeatherCard } from "@/components/weather/weather-card";
 import { getCurrentUser } from "@/lib/auth/session";
+import { listFavoriteLocationsForCity } from "@/lib/favorites/service";
 import { isGcsConfigured } from "@/lib/gcs/service";
 import { formatTemperature, unslugifyCity } from "@/lib/utils";
 import { resolveWeatherBackgroundMood } from "@/lib/weather/resolve-weather-background";
@@ -41,6 +43,16 @@ export default async function CityPage({
   if (!city) notFound();
 
   const weather = await getWeatherForCity(city, units, user?.id ?? null).catch(() => null);
+  const favoriteLocations = user
+    ? await listFavoriteLocationsForCity(user.id, {
+        cityId: weather?.city.id ?? null,
+        cityName: weather?.city.name ?? city,
+        country: weather?.city.country ?? null,
+        region: weather?.city.region ?? null,
+        latitude: weather?.city.lat ?? null,
+        longitude: weather?.city.lon ?? null,
+      }).catch(() => [])
+    : [];
 
   if (!weather) {
     return (
@@ -120,6 +132,23 @@ export default async function CityPage({
       <section className="relative z-10 mx-auto -mt-14 grid max-w-6xl gap-6 px-4 pb-12 sm:px-6">
         <div className="grid gap-6">
           <WeatherCard weather={weather} />
+          <FavoriteLocationControl
+            cityId={weather.city.id}
+            cityName={weather.city.name}
+            country={weather.city.country}
+            region={weather.city.region}
+            latitude={weather.city.lat}
+            longitude={weather.city.lon}
+            unitsPreference={units}
+            signedIn={Boolean(user)}
+            favorites={favoriteLocations.map((favorite) => ({
+              id: favorite.id,
+              label: favorite.label,
+              cityName: favorite.cityName,
+              country: favorite.country,
+              region: favorite.region,
+            }))}
+          />
           <SaveMomentForm
             cityId={weather.city.id}
             weatherSnapshotId={weather.snapshot.id}

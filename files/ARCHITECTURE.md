@@ -29,12 +29,18 @@ IconicSkies is a single Next.js App Router application. The browser renders prod
 - `/dashboard`: protected Sky Journal timeline.
 - `/journal`, `/gallery`, `/settings`: protected supporting surfaces as scope permits.
 - `/api/weather`: server-side weather lookup.
+- `/api/weather/preview`: explicit current-location weather preview from browser-provided coordinates.
 - `/api/sky-moments`: create and list user moments.
+- `/api/favorites`: list and create favorite locations.
+- `/api/favorites/[id]`: update label or delete a favorite location.
+- `/api/favorites/[id]/weather`: preview a single favorite location.
 - `/api/uploads/sign`, `/api/uploads/complete`: upload handshake.
 
 ## Local Development
 
 Local PostgreSQL runs through Docker Compose with `postgres:18`. The app supports mock weather and mock upload when external credentials are missing.
+Favorite locations are private to the authenticated user. Current-location preview stays ephemeral until the user explicitly saves it as a favorite, and rounded coordinates are stored only after that save action.
+Legacy `favorite_cities` remains untouched. `favorite_locations` is the source of truth for this feature slice.
 
 ## Deployment
 

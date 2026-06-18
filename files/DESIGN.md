@@ -42,6 +42,15 @@ The product should not feel like a generic dark template. The visual language sh
 - City layering uses condition-specific mood images in the hero only, then transitions into solid/semi-solid panels so the weather mood registers without sacrificing form readability.
 - Video mode remains a desktop enhancement: muted, looping, `playsInline`, `preload="metadata"`, and poster fallback if playback fails.
 
+## Favorite Locations
+
+- Signed-in users can save private favorite locations with custom labels such as Home, Hostel, or Work.
+- The dashboard treats favorites as a compact personal sky board, not a CRUD table.
+- Favorite cards show a live weather preview for up to 6 places, with graceful per-card fallback if a preview fails.
+- The dashboard also includes an explicit, click-to-use current-location preview card. Location access stays ephemeral until the user explicitly saves it as a favorite.
+- Saved sky moments in the timeline show a small favorite pill when the moment belongs to one of the user's saved places.
+- Favorite labels and current-location save controls should stay calm, compact, and readable. The user should see the weather first, then the place identity, then the editing actions.
+
 ## Accessibility
 
 - Maintain clear focus states for links, buttons, inputs, and file controls.

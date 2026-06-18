@@ -6,6 +6,7 @@ type Moment = {
   id: string;
   note: string | null;
   capturedAt: Date;
+  favoriteLabel?: string | null;
   photoId: string | null;
   cityName: string;
   country: string | null;
@@ -65,42 +66,48 @@ export function SkyTimeline({ moments }: { moments: Moment[] }) {
               </div>
             ) : null}
             <div className="flex flex-col justify-between gap-5">
-            <div>
-              <div className="flex flex-wrap items-center gap-3 text-sm text-skyInk/65">
-                <span className="inline-flex items-center gap-1.5">
-                  <MapPin aria-hidden className="size-4" />
-                  {moment.cityName}
-                  {moment.country ? `, ${moment.country}` : ""}
-                </span>
-                <span>
-                  {new Intl.DateTimeFormat("en", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  }).format(moment.capturedAt)}
-                </span>
-                {hasPhoto ? (
-                  <span className="rounded-full bg-horizon/25 px-2 py-1 text-xs font-semibold text-skyInk">
-                    {moment.isMockPhoto ? "Mock photo" : "Uploaded photo"}
+              <div>
+                <div className="flex flex-wrap items-center gap-3 text-sm text-skyInk/65">
+                  <span className="inline-flex items-center gap-1.5">
+                    <MapPin aria-hidden className="size-4" />
+                    {moment.cityName}
+                    {moment.country ? `, ${moment.country}` : ""}
                   </span>
-                ) : null}
+                  <span>
+                    {new Intl.DateTimeFormat("en", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    }).format(moment.capturedAt)}
+                  </span>
+                  {moment.favoriteLabel ? (
+                    <span className="rounded-full bg-aurora/18 px-2 py-1 text-xs font-semibold text-skyInk">
+                      {moment.favoriteLabel}
+                    </span>
+                  ) : null}
+                  {hasPhoto ? (
+                    <span className="rounded-full bg-horizon/25 px-2 py-1 text-xs font-semibold text-skyInk">
+                      {moment.isMockPhoto ? "Mock photo" : "Uploaded photo"}
+                    </span>
+                  ) : null}
+                </div>
+                <h2 className="mt-3 text-2xl font-semibold text-skyInk">
+                  {moment.condition} at{" "}
+                  {formatTemperature(moment.temperature, moment.units === "imperial" ? "imperial" : "metric")}
+                </h2>
+                <p className="mt-1 text-sm text-skyInk/65">
+                  {moment.description ?? moment.comfortLabel ?? "Weather snapshot saved."}
+                </p>
+                {moment.note ? (
+                  <p className="mt-4 max-w-2xl text-lg leading-8 text-skyInk">{moment.note}</p>
+                ) : (
+                  <p className="mt-4 text-skyInk/55">No note yet.</p>
+                )}
               </div>
-              <h2 className="mt-3 text-2xl font-semibold text-skyInk">
-                {moment.condition} at {formatTemperature(moment.temperature, moment.units === "imperial" ? "imperial" : "metric")}
-              </h2>
-              <p className="mt-1 text-sm text-skyInk/65">
-                {moment.description ?? moment.comfortLabel ?? "Weather snapshot saved."}
-              </p>
-              {moment.note ? (
-                <p className="mt-4 max-w-2xl text-lg leading-8 text-skyInk">{moment.note}</p>
-              ) : (
-                <p className="mt-4 text-skyInk/55">No note yet.</p>
-              )}
             </div>
-          </div>
-        </article>
+          </article>
         );
       })}
     </section>

@@ -138,6 +138,39 @@ export const favoriteCities = pgTable(
   }),
 );
 
+export const favoriteLocations = pgTable(
+  "favorite_locations",
+  {
+    id: uuid("id").primaryKey().default(sql`uuidv7()`),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    cityId: uuid("city_id").references(() => cities.id, { onDelete: "set null" }),
+    label: varchar("label", { length: 120 }).notNull(),
+    cityName: varchar("city_name", { length: 160 }).notNull(),
+    country: varchar("country", { length: 80 }),
+    region: varchar("region", { length: 120 }),
+    normalizedCityKey: varchar("normalized_city_key", { length: 220 }).notNull(),
+    latitude: numeric("latitude", { precision: 9, scale: 3 }),
+    longitude: numeric("longitude", { precision: 9, scale: 3 }),
+    unitsPreference: varchar("units_preference", { length: 16 }),
+    locationKey: text("location_key").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    uniqueLocation: uniqueIndex("favorite_locations_user_location_unique").on(
+      table.userId,
+      table.locationKey,
+    ),
+    userRecentIdx: index("favorite_locations_user_recent_idx").on(table.userId, table.createdAt),
+    userCityKeyIdx: index("favorite_locations_user_city_key_idx").on(
+      table.userId,
+      table.normalizedCityKey,
+    ),
+  }),
+);
+
 export const userPreferences = pgTable("user_preferences", {
   userId: uuid("user_id")
     .primaryKey()

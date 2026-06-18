@@ -22,10 +22,10 @@
 - [ ] Add unit tests around auth, weather normalization, and upload validation.
 - [ ] Add dependency-audit follow-up for npm moderate transitive findings.
 - [ ] Add focused unit tests for weather background mood resolution edge cases.
+- [x] Favorite locations.
 
 ## Secondary If Time Allows
 
-- [ ] Favorites.
 - [ ] Recent searches view.
 - [ ] Gallery page.
 - [ ] Settings page.

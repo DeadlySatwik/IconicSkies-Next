@@ -83,3 +83,22 @@
 - Auth fix: login and register now catch local Postgres connection refusal and return clean `503` JSON errors instead of crashing the route and leaving the browser with an empty response body.
 - Weather fix: live weather lookup now keeps rendering weather results even when cache/persist writes cannot reach Postgres, so city pages do not collapse into the generic lookup-failed state just because the database is offline.
 - Browser behavior: verified `/api/auth/login` returns a structured `503` response when `127.0.0.1:5432` is unavailable, and verified `/city/alipurduar?units=metric` still renders weather content instead of the lookup-failed panel.
+
+## 2026-06-18 - Favorite Locations
+
+- Files modified: `lib/db/schema.ts`, `migrations/0002_favorite_locations.sql`, `lib/security/validation.ts`, `lib/weather/service.ts`, `lib/favorites/service.ts`, `app/api/favorites/route.ts`, `app/api/favorites/[id]/route.ts`, `app/api/favorites/[id]/weather/route.ts`, `app/api/weather/preview/route.ts`, `app/city/[slug]/page.tsx`, `app/dashboard/page.tsx`, `components/favorites/current-location-card.tsx`, `components/favorites/favorite-location-control.tsx`, `components/favorites/favorite-location-actions.tsx`, `components/favorites/favorite-locations-grid.tsx`, `components/sky/timeline.tsx`, `files/DESIGN.md`, `files/ARCHITECTURE.md`, `files/DATABASE_NOTES.md`, `files/HANDOFF.md`, `files/TODO.md`.
+- Major decisions: keep `favorite_cities` legacy-only; introduce `favorite_locations` as the source of truth; allow multiple labels for the same city identity by including label in the unique location key; store rounded current-location coordinates only after an explicit save action.
+- Dashboard behavior: added a compact "Current Sky" card that previews weather near the user only after clicking a button, a "My Places" grid with up to 6 live weather previews, per-card fallback states, and edit/remove controls.
+- City behavior: added a subtle favorite save control that lets signed-in users add or update labels such as Home, Hostel, or Work without disturbing the atmospheric weather layout.
+- Timeline behavior: matching saved moments now show a small favorite pill when they belong to one of the user's favorite locations.
+- Privacy behavior: current-location preview is ephemeral until explicitly saved, raw coordinates are never shown in the UI, and stored favorite coordinates are rounded to roughly 3 decimals.
+- Commands run: `npm run typecheck`, `npm run lint`, `npm run build`, `npm run test:e2e`.
+- Quality results: typecheck passed, lint passed, production build passed, Playwright passed 7/8 after a sandbox escalation was needed for the local web server bind during the e2e run. One desktop-only landing video test remains intentionally skipped on the mobile project.
+
+## 2026-06-18 - Favorite Locations Polish Pass
+
+- Files modified: `lib/weather/service.ts`, `lib/weather/current-location.ts`, `app/api/weather/preview/route.ts`, `components/favorites/current-location-card.tsx`, `components/favorites/favorite-location-control.tsx`, `components/favorites/favorite-location-actions.tsx`, `components/favorites/favorite-locations-grid.tsx`, `components/layout/current-location-entry.tsx`, `app/page.tsx`, `app/dashboard/page.tsx`, `files/BUILD_LOG.md`, `files/HANDOFF.md`.
+- Major decisions: improve dashboard contrast with slightly denser surfaces and stronger text colors; resolve current-location labels against the nearest searchable city when confidence is good, otherwise fall back to "Near your location"; keep the landing current-location entry point compact and subordinate to the hero search.
+- Privacy behavior: current-location preview remains ephemeral, and the preview endpoint still exposes no coordinates or secrets to the browser.
+- Commands run: `npm run typecheck`, `npm run lint`, `npm run build`.
+- Quality results: typecheck passed, lint passed after renaming the current-location click handler, and the production build passed.
