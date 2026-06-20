@@ -27,6 +27,7 @@ The product should not feel like a generic dark template. The visual language sh
 - Search field with explicit submit button and loading/error states.
 - Weather hero with condition, temperature, location, local time, humidity, wind, and forecast.
 - Sky moment form with note input and upload/mock upload affordance.
+- Optional AI journal enhancement inside the Sky Moment form, with a writing-style dropdown, a preview card, and user-approved apply/copy/regenerate actions.
 - Timeline item with city, date, weather snapshot, note, and photo if present.
 - Navigation with signed-in/signed-out states.
 
@@ -51,6 +52,16 @@ The product should not feel like a generic dark template. The visual language sh
 - The dashboard also includes an explicit, click-to-use current-location preview card. Location access stays ephemeral until the user explicitly saves it as a favorite.
 - Saved sky moments in the timeline show a small favorite pill when the moment belongs to one of the user's saved places.
 - Favorite labels and current-location save controls should stay calm, compact, and readable. The user should see the weather first, then the place identity, then the editing actions.
+
+## AI Journal Enhancement
+
+- The AI note helper is optional and only appears when `GROQ_API_KEY` is configured server-side.
+- It polishes the user's rough Sky Journal note, but never replaces it automatically.
+- Styles currently include Aesthetic, Formal, Classic, Poetic, Minimal, Nostalgic, Travel diary, and Weather report.
+- The assistant should use weather context as atmosphere, not as a source of invented facts.
+- The result should feel like the user's writing, just clearer and more intentional.
+- The default Groq model is `llama-3.3-70b-versatile`, and `GROQ_MODEL` can override it when needed.
+- Future additions could include AI title suggestions and monthly recap drafts, but those remain out of scope for this slice.
 
 ## Accessibility
 

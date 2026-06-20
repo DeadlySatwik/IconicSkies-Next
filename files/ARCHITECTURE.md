@@ -31,6 +31,7 @@ IconicSkies is a single Next.js App Router application. The browser renders prod
 - `/api/weather`: server-side weather lookup.
 - `/api/weather/preview`: explicit current-location weather preview from browser-provided coordinates.
 - `/api/sky-moments`: create and list user moments.
+- `/api/ai/journal-enhance`: authenticated, server-side note polishing powered by Groq when configured.
 - `/api/favorites`: list and create favorite locations.
 - `/api/favorites/[id]`: update label or delete a favorite location.
 - `/api/favorites/[id]/weather`: preview a single favorite location.
@@ -41,6 +42,13 @@ IconicSkies is a single Next.js App Router application. The browser renders prod
 Local PostgreSQL runs through Docker Compose with `postgres:18`. The app supports mock weather and mock upload when external credentials are missing.
 Favorite locations are private to the authenticated user. Current-location preview stays ephemeral until the user explicitly saves it as a favorite, and rounded coordinates are stored only after that save action.
 Legacy `favorite_cities` remains untouched. `favorite_locations` is the source of truth for this feature slice.
+AI journal enhancement is server-only. The browser receives only the polished note result, never `GROQ_API_KEY` or raw provider credentials. The route uses the user note plus weather context, and it avoids sending private photo URLs or user identity details beyond what the prompt needs. The Groq model defaults to `llama-3.3-70b-versatile`, with `GROQ_MODEL` available as an override.
+
+## Environment
+
+- `GROQ_API_KEY`: enables the optional journal note enhancement flow. When missing, the UI disables the action gracefully and the route returns a configuration error.
+- `GROQ_MODEL`: optional Groq model override for the journal enhancer. Defaults to `llama-3.3-70b-versatile`.
+- `GROQ_FALLBACK_MODEL`: optional fallback model used only when the primary Groq model fails before returning a usable response.
 
 ## Deployment
 

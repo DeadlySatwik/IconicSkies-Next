@@ -23,6 +23,7 @@
 - [ ] Add dependency-audit follow-up for npm moderate transitive findings.
 - [ ] Add focused unit tests for weather background mood resolution edge cases.
 - [x] Favorite locations.
+- [x] AI Journal Enhancement.
 
 ## Secondary If Time Allows
 
@@ -31,3 +32,9 @@
 - [ ] Settings page.
 - [ ] Compare page.
 - [ ] Admin view.
+
+## Future Journal Ideas
+
+- [ ] AI title generation for saved sky moments.
+- [ ] Monthly recap drafts for the Sky Journal timeline.
+- [ ] Rewrite an older saved note from the dashboard edit flow, only if the UX stays compact and user-approved.

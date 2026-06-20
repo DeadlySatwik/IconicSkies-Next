@@ -110,3 +110,35 @@
 - Visual behavior: dashboard hero, My Places, and timeline cards now use dark premium surfaces; the failed search page uses a centered error card with quick city suggestions and the existing search panel.
 - Commands run: `npm run typecheck`, `npm run lint`, `npm run build`, `npm run test:e2e` with sandbox escalation for local web-server startup.
 - Quality results: typecheck passed, lint passed, production build passed, and Playwright passed 7/8 with the desktop-only landing video check skipped on the mobile project.
+
+## 2026-06-20 - AI Journal Enhancement
+
+- Files created: `app/api/ai/journal-enhance/route.ts`, `lib/ai/journal-enhancer.ts`, `lib/ai/journal-styles.ts`.
+- Files modified: `components/sky/save-moment-form.tsx`, `app/city/[slug]/page.tsx`, `files/DESIGN.md`, `files/ARCHITECTURE.md`, `files/BUILD_LOG.md`, `files/HANDOFF.md`, `files/TODO.md`.
+- Major decisions: add an optional Gemini-powered polishing helper inside the Sky Moment form, keep the user’s original note intact until they explicitly accept the suggestion, and keep all AI work server-side.
+- Privacy behavior: only the note text and minimal weather context are sent to Gemini. No secrets, user email, private photo URLs, or raw GCS object paths are exposed to the browser.
+- UX behavior: the form now shows a small style picker, an enhancement button, and a compact preview card with accept/regenerate/copy/keep-original actions. If `GEMINI_API_KEY` is missing, the button is disabled with a calm explanatory message.
+- Commands run: `npm run typecheck`, `npm run lint`, `npm run build`, `npm run test:e2e` with sandbox escalation for the local web-server startup.
+- Quality results: typecheck passed, lint passed, production build passed, and Playwright passed 7/8 with the desktop-only landing video check skipped on the mobile project.
+
+## 2026-06-20 - AI Route Contract Cleanup
+
+- Files modified: `app/api/ai/journal-enhance/route.ts`, `components/sky/save-moment-form.tsx`.
+- Major decisions: simplify the API response to return only `enhancedNote`, and keep the client check focused on the HTTP status plus the returned note text.
+- Commands run: `npm run typecheck`, `npm run lint`, `npm run build`.
+- Quality results: typecheck passed, lint passed, and the production build passed.
+
+## 2026-06-20 - AI Journal Polish Pass
+
+- Files modified: `components/sky/save-moment-form.tsx`, `lib/ai/journal-enhancer.ts`, `app/api/ai/journal-enhance/route.ts`, `files/DESIGN.md`, `files/ARCHITECTURE.md`.
+- Major decisions: replace the style chip row with a readable writing-style dropdown, raise assistant-panel contrast, and strengthen the prompt so it preserves concrete note details like DSA, dev work, travel, or weather context.
+- Model behavior: default Gemini model is now `gemini-2.5-flash`, with `GEMINI_MODEL` override support.
+- Safety behavior: the route rejects weak Gemini fragments that are too short or clearly incomplete, instead of surfacing a blunt fragment to the user.
+
+## 2026-06-21 - AI Journal Groq Provider Switch
+
+- Files modified: `app/api/ai/journal-enhance/route.ts`, `lib/ai/journal-enhancer.ts`, `components/sky/save-moment-form.tsx`, `app/city/[slug]/page.tsx`, `.env.example`, `files/DESIGN.md`, `files/ARCHITECTURE.md`, `files/HANDOFF.md`.
+- Major decisions: replace the Gemini provider path with Groq's OpenAI-compatible chat completions endpoint and keep the existing dropdown/preview UI.
+- Model behavior: default Groq model is `llama-3.3-70b-versatile`; `GROQ_MODEL` can override it and `GROQ_FALLBACK_MODEL` is attempted only when the primary provider response fails before producing a usable response.
+- Prompt behavior: the system prompt is now style-specific and explicitly preserves non-weather activity context, weather mood, and technical terms such as DSA.
+- Safety behavior: validation rejects only empty output, very short output, punctuation fragments, unfinished phrases, or output that drops all meaningful original context.

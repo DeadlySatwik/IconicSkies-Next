@@ -172,6 +172,12 @@ export default async function CityPage({
             weatherSnapshotId={weather.snapshot.id}
             gcsEnabled={isGcsConfigured()}
             signedIn={Boolean(user)}
+            aiEnabled={Boolean(process.env.GROQ_API_KEY)}
+            cityName={weather.city.name}
+            condition={weather.snapshot.condition}
+            temperature={weather.snapshot.temperature}
+            units={weather.snapshot.units}
+            capturedAt={weather.snapshot.capturedAt}
             variant="cinematic"
           />
         </div>

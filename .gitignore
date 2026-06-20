@@ -87,3 +87,7 @@ output/
 assets-source/
 .cache/
 .next-dev.log
+
+# Local env backups
+.env.local.backup
+.env*.backup

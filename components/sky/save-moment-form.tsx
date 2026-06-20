@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Camera, LoaderCircle, Save } from "lucide-react";
+import { Camera, Check, ChevronDown, Copy, LoaderCircle, RefreshCw, Save, Sparkles } from "lucide-react";
+import { journalEnhancementStyles, type JournalEnhancementStyle } from "@/lib/ai/journal-styles";
 
 const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const maxUploadSizeBytes = 8 * 1024 * 1024;
@@ -13,12 +14,26 @@ export function SaveMomentForm({
   weatherSnapshotId,
   gcsEnabled,
   signedIn,
+  aiEnabled,
+  cityName,
+  condition,
+  temperature,
+  units,
+  capturedAt,
+  favoriteLabel = null,
   variant = "default",
 }: {
   cityId: string;
   weatherSnapshotId: string;
   gcsEnabled: boolean;
   signedIn: boolean;
+  aiEnabled?: boolean;
+  cityName: string;
+  condition: string;
+  temperature: number;
+  units: "metric" | "imperial";
+  capturedAt: string;
+  favoriteLabel?: string | null;
   variant?: "default" | "cinematic";
 }) {
   const [note, setNote] = useState("");
@@ -26,8 +41,14 @@ export function SaveMomentForm({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [message, setMessage] = useState("");
+  const [aiStyle, setAiStyle] = useState<JournalEnhancementStyle>("Aesthetic");
+  const [aiStatus, setAiStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [aiError, setAiError] = useState("");
+  const [aiMessage, setAiMessage] = useState("");
+  const [aiNote, setAiNote] = useState("");
   const router = useRouter();
   const cinematic = variant === "cinematic";
+  const aiConfigured = Boolean(aiEnabled);
   const sectionClass = cinematic
     ? "rounded-2xl border border-skyInk/10 bg-[#eef4f1] p-6 text-skyInk shadow-[0_22px_70px_rgba(0,0,0,0.18)] sm:p-7"
     : "rounded-xl border border-skyInk/10 bg-cloud p-6 shadow-soft";
@@ -37,6 +58,7 @@ export function SaveMomentForm({
   const inputSurfaceClass = cinematic
     ? "rounded-xl border border-skyInk/10 bg-white/86 p-4"
     : "rounded-lg border border-skyInk/10 bg-white p-3";
+  const photoPresent = Boolean(selectedFile) || (!gcsEnabled && attachMockPhoto);
 
   function validateSelectedFile(file: File) {
     if (!allowedTypes.has(file.type)) {
@@ -48,6 +70,73 @@ export function SaveMomentForm({
     }
 
     return "";
+  }
+
+  async function enhanceNote() {
+    if (!aiConfigured || note.trim().length < 3 || aiStatus === "loading") return;
+
+    setAiStatus("loading");
+    setAiError("");
+    setAiMessage("");
+
+    try {
+      const response = await fetch("/api/ai/journal-enhance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          note,
+          style: aiStyle,
+          city: cityName,
+          condition,
+          temperature,
+          units,
+          capturedAt,
+          favoriteLabel,
+          hasPhoto: photoPresent,
+        }),
+      });
+
+      const payload = (await response.json().catch(() => null)) as {
+        error?: string;
+        enhancedNote?: string;
+      } | null;
+
+      if (!response.ok || !payload?.enhancedNote) {
+        setAiStatus("error");
+        setAiError(response.status === 429 && payload?.error ? payload.error : "Could not polish this note right now.");
+        return;
+      }
+
+      setAiNote(payload.enhancedNote);
+      setAiStatus("ready");
+      setAiMessage("AI-polished note ready.");
+    } catch {
+      setAiStatus("error");
+      setAiError("Could not polish this note right now.");
+    }
+  }
+
+  function handleUseEnhancedNote() {
+    if (!aiNote) return;
+    setNote(aiNote);
+    setAiStatus("idle");
+    setAiError("");
+    setAiNote("");
+    setAiMessage("Enhanced note placed in the textarea.");
+  }
+
+  function keepOriginalNote() {
+    setAiStatus("idle");
+    setAiError("");
+    setAiNote("");
+    setAiMessage("Kept your original note.");
+  }
+
+  async function copyEnhancedNote() {
+    if (!aiNote || !navigator.clipboard) return;
+
+    await navigator.clipboard.writeText(aiNote);
+    setAiMessage("Copied the AI-polished note.");
   }
 
   async function uploadSelectedFile(file: File) {
@@ -207,10 +296,129 @@ export function SaveMomentForm({
             id="moment-note"
             className="mt-2 min-h-32 w-full rounded-xl border border-skyInk/15 bg-white px-4 py-3 text-skyInk placeholder:text-skyInk/45 focus:border-horizon focus:ring-2 focus:ring-horizon/25"
             value={note}
-            onChange={(event) => setNote(event.target.value)}
+            onChange={(event) => {
+              setNote(event.target.value);
+              if (aiNote) {
+                setAiNote("");
+                setAiStatus("idle");
+                setAiError("");
+                setAiMessage("");
+              }
+            }}
             maxLength={1200}
             placeholder="First day of college, rain before the train, sunset after exams..."
           />
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-[#eef4f1] p-4 text-slate-950 shadow-[0_14px_40px_rgba(15,23,42,0.10)]">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div className="max-w-2xl">
+                <p className="text-sm font-semibold text-slate-950">AI note assistant</p>
+                <p className="mt-1 text-sm leading-6 text-slate-700">
+                  Polish your note while keeping your original meaning.
+                </p>
+              </div>
+              {aiConfigured ? (
+                <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-end sm:justify-end">
+                  <div className="min-w-0 sm:min-w-56">
+                    <label className="mb-1.5 block text-sm font-medium text-slate-700" htmlFor="ai-style">
+                      Writing style
+                    </label>
+                    <div className="relative">
+                      <select
+                        id="ai-style"
+                        className="w-full appearance-none rounded-xl border border-slate-300 bg-white px-4 py-2.5 pr-10 text-sm font-medium text-slate-950 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400/20 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-700 disabled:opacity-100"
+                        disabled={aiStatus === "loading"}
+                        value={aiStyle}
+                        onChange={(event) => setAiStyle(event.target.value as JournalEnhancementStyle)}
+                      >
+                        {journalEnhancementStyles.map((style) => (
+                          <option key={style} value={style}>
+                            {style}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown aria-hidden className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
+                    </div>
+                  </div>
+                  <button
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400/40 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:opacity-100"
+                    disabled={aiStatus === "loading" || note.trim().length < 3}
+                    type="button"
+                    onClick={() => void enhanceNote()}
+                  >
+                    {aiStatus === "loading" ? <LoaderCircle aria-hidden className="size-4 animate-spin" /> : <Sparkles aria-hidden className="size-4" />}
+                    {aiStatus === "loading" ? "Polishing your sky note..." : "Enhance with AI"}
+                  </button>
+                </div>
+              ) : (
+                <div className="inline-flex min-h-11 items-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700">
+                  AI enhancement is not configured yet.
+                </div>
+              )}
+            </div>
+
+            {aiStatus === "loading" ? (
+              <p className="text-sm text-slate-700">Polishing your sky note...</p>
+            ) : null}
+
+            {aiNote ? (
+              <div className="overflow-hidden rounded-xl border border-slate-300 bg-white shadow-[0_10px_30px_rgba(15,23,42,0.08)]">
+                <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">AI-polished note</p>
+                    <p className="mt-1 text-xs text-slate-700">Review it before saving.</p>
+                  </div>
+                  <div className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-slate-100 px-3 py-1 text-[0.68rem] font-semibold text-slate-800">
+                    {aiStyle}
+                  </div>
+                </div>
+                <div className="p-4">
+                  <p className="whitespace-pre-wrap text-[0.98rem] leading-7 text-slate-950">{aiNote}</p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <button
+                      className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-slate-950 px-3 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400/40"
+                      type="button"
+                      disabled={aiStatus === "loading"}
+                      onClick={() => handleUseEnhancedNote()}
+                    >
+                      <Check aria-hidden className="size-4" />
+                      Use enhanced note
+                    </button>
+                    <button
+                      className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400/30"
+                      type="button"
+                      disabled={aiStatus === "loading"}
+                      onClick={() => void enhanceNote()}
+                    >
+                      <RefreshCw aria-hidden className="size-4" />
+                      Regenerate
+                    </button>
+                    <button
+                      className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400/30"
+                      type="button"
+                      disabled={aiStatus === "loading"}
+                      onClick={() => keepOriginalNote()}
+                    >
+                      Keep original
+                    </button>
+                    <button
+                      className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400/30"
+                      type="button"
+                      disabled={aiStatus === "loading"}
+                      onClick={() => void copyEnhancedNote()}
+                    >
+                      <Copy aria-hidden className="size-4" />
+                      Copy
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {aiError ? <p className="text-sm font-medium text-red-700">{aiError}</p> : null}
+            {aiMessage ? <p className="text-sm font-medium text-slate-700">{aiMessage}</p> : null}
+          </div>
         </div>
         {gcsEnabled ? (
           <div className={inputSurfaceClass}>

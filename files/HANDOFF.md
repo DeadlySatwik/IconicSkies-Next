@@ -129,6 +129,11 @@ Update on 2026-06-18: favorite locations are now implemented. Signed-in users ca
 - Latest verification on 2026-06-18: `npm run typecheck`, `npm run lint`, `npm run build`, and escalated `npm run test:e2e` passed. Playwright reported 7 passed and 1 skipped, with the skipped test remaining the desktop-only landing video toggle check on the mobile project.
 - Update on 2026-06-18: the favorites polish pass tightened dashboard contrast, improved current-location city resolution so nearby locations fall back to a calmer "Near your location" label when confidence is low, and added a compact landing-page "Use current location" entry point beside the hero search.
 - Update on 2026-06-18: dashboard, journal, and failed city-search states now share a dark atmospheric shell so the app keeps one cinematic weather identity outside the landing and city success pages.
+- Update on 2026-06-20: Sky Journal includes an optional AI note enhancer in the save form. It is server-side only, disabled gracefully when the provider key is missing, and only applies the polished text after the user explicitly accepts it.
+- Update on 2026-06-20: the AI note assistant ships with a writing-style dropdown, a compact preview card, and a private server-side provider route. The original note remains the source of truth until the user accepts an enhanced version.
+- Update on 2026-06-20: the AI API now returns only the enhanced note text, and the client treats the response as a simple note suggestion flow.
+- Update on 2026-06-20: the AI assistant now uses a readable writing-style dropdown, higher-contrast surfaces, and a stricter prompt that preserves concrete details from the user's original note.
+- Update on 2026-06-21: AI Journal Enhancement now uses Groq instead of Gemini. Configure `GROQ_API_KEY`, with `GROQ_MODEL=llama-3.3-70b-versatile` by default and optional `GROQ_FALLBACK_MODEL=qwen/qwen3-32b`.
 
 ## Exact Next Steps
 
@@ -140,6 +145,8 @@ Update on 2026-06-18: favorite locations are now implemented. Signed-in users ca
 6. If original filenames should appear in the UI later, add an explicit migration for `sky_photos.original_filename`.
 7. Add focused unit coverage for weather mood resolution edge cases if the resolver grows more complex.
 8. Consider unit tests for favorite-location identity matching and current-location privacy behavior if the slice is extended further.
+9. Consider adding an AI title generator or monthly recap drafts later if the journal assistant proves useful.
+10. Set `GROQ_API_KEY` in production if AI note enhancement should be available to signed-in users.
 
 ## Resume Prompt
 
