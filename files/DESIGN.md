@@ -28,8 +28,16 @@ The product should not feel like a generic dark template. The visual language sh
 - Weather hero with condition, temperature, location, local time, humidity, wind, and forecast.
 - Sky moment form with note input and upload/mock upload affordance.
 - Optional AI journal enhancement inside the Sky Moment form, with a writing-style dropdown, a preview card, and user-approved apply/copy/regenerate actions.
+- Optional AI title and mood-tag suggestions inside the Sky Moment form, kept compact and user-approved so the journal note still remains the hero.
 - Timeline item with city, date, weather snapshot, note, and photo if present.
 - Navigation with signed-in/signed-out states.
+
+## Progressive Disclosure
+
+- Optional dashboard surfaces should collapse cleanly instead of stacking tall by default.
+- `Current Sky` stays visible, while `Monthly Sky Recap`, `Favorite skies`, and older journal months use collapsible headers with useful summary text.
+- The save form keeps the note, photo upload, and save button visible, but AI note enhancement and title/mood tools live in collapsible panels.
+- Collapsed headers should remain informative and accessible, with counts or status text so the hidden content is obvious before it is opened.
 
 ## Atmospheric Backgrounds
 
@@ -61,7 +69,8 @@ The product should not feel like a generic dark template. The visual language sh
 - The assistant should use weather context as atmosphere, not as a source of invented facts.
 - The result should feel like the user's writing, just clearer and more intentional.
 - The default Groq model is `llama-3.3-70b-versatile`, and `GROQ_MODEL` can override it when needed.
-- Future additions could include AI title suggestions and monthly recap drafts, but those remain out of scope for this slice.
+- AI journal insights generate optional titles plus mood tags. The title should feel compact and poetic, while tags should stay readable and lowercase.
+- Monthly recap lives on the dashboard as an on-demand summary card with month navigation, calm stats, and a generated paragraph only after the user clicks a button.
 
 ## Accessibility
 
@@ -69,3 +78,4 @@ The product should not feel like a generic dark template. The visual language sh
 - Use labels and accessible names for forms and actions.
 - Avoid text over busy image areas unless contrast is guaranteed.
 - Provide reduced-motion-safe interactions.
+- Collapsible sections should preserve state when closed, support keyboard toggling, and never trigger AI or network work simply because they were opened.

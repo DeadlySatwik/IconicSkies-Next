@@ -56,6 +56,8 @@ export async function createSkyMoment(input: {
   cityId: string;
   weatherSnapshotId: string;
   photoId?: string;
+  title?: string | null;
+  moodTags?: string[] | null;
   note: string;
   attachMockPhoto: boolean;
 }) {
@@ -65,6 +67,8 @@ export async function createSkyMoment(input: {
       cityId: input.cityId,
       weatherSnapshotId: input.weatherSnapshotId,
       photoId: input.photoId,
+      title: input.title,
+      moodTags: input.moodTags,
       note: input.note,
     });
   }
@@ -102,6 +106,8 @@ export async function createSkyMoment(input: {
         cityId: input.cityId,
         weatherSnapshotId: input.weatherSnapshotId,
         photoId,
+        title: input.title?.trim() || null,
+        moodTags: input.moodTags && input.moodTags.length > 0 ? input.moodTags : null,
         note: input.note,
         capturedAt: new Date(),
       })
@@ -115,6 +121,8 @@ export async function createSkyMoment(input: {
       cityId: input.cityId,
       weatherSnapshotId: input.weatherSnapshotId,
       photoId: input.photoId,
+      title: input.title,
+      moodTags: input.moodTags,
       note: input.note,
     });
   }
@@ -128,6 +136,8 @@ export async function listSkyMoments(userId: string) {
       .select({
         id: skyMoments.id,
         note: skyMoments.note,
+        title: skyMoments.title,
+        moodTags: skyMoments.moodTags,
         capturedAt: skyMoments.capturedAt,
         photoId: skyMoments.photoId,
         cityName: cities.name,
@@ -157,6 +167,9 @@ export async function listSkyMoments(userId: string) {
         ...rest,
         ...weatherMetadataFromRawPayload(_rawPayload),
         temperature: toNumber(row.temperature) ?? 0,
+        moodTags: Array.isArray(row.moodTags)
+          ? row.moodTags.filter((tag): tag is string => typeof tag === "string")
+          : null,
       };
     });
   } catch (error) {

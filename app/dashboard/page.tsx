@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { CurrentLocationCard } from "@/components/favorites/current-location-card";
 import { FavoriteLocationsGrid } from "@/components/favorites/favorite-locations-grid";
 import { AtmosphericPageShell } from "@/components/layout/atmospheric-page-shell";
+import { MonthlySkyRecap } from "@/components/sky/monthly-sky-recap";
 import { SkyTimeline } from "@/components/sky/timeline";
 import { getCurrentUser } from "@/lib/auth/session";
 import {
@@ -10,15 +11,23 @@ import {
   getUserUnitsPreference,
   listFavoriteLocationsWithPreviews,
 } from "@/lib/favorites/service";
+import { getMonthKey, filterMomentsForMonth, summarizeMonthlyMoments } from "@/lib/sky/monthly-recap";
 import { listSkyMoments } from "@/lib/sky/service";
 
 export const metadata = {
   title: "Sky Journal",
 };
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string }>;
+}) {
   const user = await getCurrentUser().catch(() => null);
   if (!user) redirect("/login");
+
+  const query = await searchParams.catch(() => ({ month: undefined as string | undefined }));
+  const monthKey = query.month && /^\d{4}-\d{2}$/.test(query.month) ? query.month : getMonthKey();
 
   const [moments, units, favoriteLocations] = await Promise.all([
     listSkyMoments(user.id).catch(() => []),
@@ -29,30 +38,32 @@ export default async function DashboardPage() {
     ...moment,
     favoriteLabel: favoriteLabelForMoment(moment, favoriteLocations),
   }));
+  const monthMoments = filterMomentsForMonth(timelineMoments, monthKey);
+  const monthlySummary = summarizeMonthlyMoments(monthMoments, monthKey);
 
   return (
     <main>
       <AtmosphericPageShell>
-      <section className="mb-8 rounded-2xl border border-white/14 bg-[#09171c]/88 p-6 text-cloud shadow-[0_22px_68px_rgba(0,0,0,0.34)] backdrop-blur-xl sm:p-8">
-        <p className="text-sm font-semibold text-aurora">Sky Journal timeline</p>
-        <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h1 className="text-4xl font-semibold">Saved skies for {user.name ?? user.email}</h1>
-            <p className="mt-3 max-w-2xl text-cloud/82">
-              Every entry starts as a weather search, then becomes a memory with place, time,
-              condition, note, and photo context.
-            </p>
+        <section className="mb-8 rounded-2xl border border-white/14 bg-[#09171c]/88 p-6 text-cloud shadow-[0_22px_68px_rgba(0,0,0,0.34)] backdrop-blur-xl sm:p-8">
+          <p className="text-sm font-semibold text-aurora">Sky Journal timeline</p>
+          <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h1 className="text-4xl font-semibold">Saved skies for {user.name ?? user.email}</h1>
+              <p className="mt-3 max-w-2xl text-cloud/82">
+                Every entry starts as a weather search, then becomes a memory with place, time, condition, note, and photo context.
+              </p>
+            </div>
+            <Link className="inline-flex items-center justify-center rounded-full bg-cloud px-4 py-2 font-semibold text-skyInk transition hover:bg-mist focus:outline-none focus:ring-2 focus:ring-aurora/40" href="/">
+              Search weather
+            </Link>
           </div>
-          <Link className="inline-flex items-center justify-center rounded-full bg-cloud px-4 py-2 font-semibold text-skyInk transition hover:bg-mist focus:outline-none focus:ring-2 focus:ring-aurora/40" href="/">
-            Search weather
-          </Link>
+        </section>
+        <div className="space-y-6">
+          <CurrentLocationCard units={units} />
+          <MonthlySkyRecap summary={monthlySummary} />
+          <FavoriteLocationsGrid defaultOpen={favoriteLocations.length === 0 && moments.length === 0} favorites={favoriteLocations} />
+          <SkyTimeline moments={timelineMoments} />
         </div>
-      </section>
-      <div className="space-y-6">
-        <CurrentLocationCard units={units} />
-        <FavoriteLocationsGrid favorites={favoriteLocations} />
-        <SkyTimeline moments={timelineMoments} />
-      </div>
       </AtmosphericPageShell>
     </main>
   );

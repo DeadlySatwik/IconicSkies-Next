@@ -54,13 +54,28 @@ test("registers, saves a sky moment, and shows it in the timeline", async ({ pag
   await expect(page.getByRole("heading", { name: /saved skies/i })).toBeVisible();
 
   await page.goto("/city/darjeeling?units=metric");
+  await expect(page.getByRole("button", { name: /enhance note with ai/i })).toHaveAttribute("aria-expanded", "false");
+  await expect(page.getByRole("button", { name: /add title & mood tags/i })).toHaveAttribute("aria-expanded", "false");
+  await page.getByRole("button", { name: /enhance note with ai/i }).click();
+  await expect(page.getByLabel("Writing style")).toBeVisible();
+  await page.getByRole("button", { name: /add title & mood tags/i }).click();
+  await expect(page.getByLabel("Title")).toBeVisible();
   await page.getByLabel("Journal note").fill("Mist over the hills during the test run.");
+  await page.getByLabel("Title").fill("Rain Before the Grind");
+  await page.getByLabel("Mood tags").fill("focused, rainy, calm, growth");
   await page.getByRole("button", { name: /save sky moment/i }).click();
   await expect(page.getByText(/saved to your sky journal/i)).toBeVisible();
 
   await page.goto("/dashboard");
-  await expect(page.getByText("Mist over the hills during the test run.")).toBeVisible();
-  await expect(page.getByLabel("Sky Journal timeline")).toBeVisible();
+  await expect(page.getByRole("button", { name: /monthly sky recap/i })).toHaveAttribute("aria-expanded", "false");
+  await expect(page.getByRole("button", { name: /favorite skies/i })).toHaveAttribute("aria-expanded", "false");
+  await page.getByRole("button", { name: /monthly sky recap/i }).click();
+  await expect(page.getByRole("button", { name: /generate monthly recap/i })).toBeVisible();
+  const timeline = page.getByLabel("Sky Journal timeline");
+  await expect(timeline).toBeVisible();
+  await expect(timeline.getByRole("button").first()).toHaveAttribute("aria-expanded", "true");
+  await expect(timeline.getByText("Rain Before the Grind")).toBeVisible();
+  await expect(timeline.getByText("Mist over the hills during the test run.")).toBeVisible();
 });
 
 test("protected dashboard redirects signed-out users", async ({ page }) => {

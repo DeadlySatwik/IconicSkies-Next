@@ -24,6 +24,7 @@
 - [ ] Add focused unit tests for weather background mood resolution edge cases.
 - [x] Favorite locations.
 - [x] AI Journal Enhancement.
+- [x] Progressive disclosure for dashboard and save-form optional panels.
 
 ## Secondary If Time Allows
 
@@ -35,6 +36,7 @@
 
 ## Future Journal Ideas
 
-- [ ] AI title generation for saved sky moments.
-- [ ] Monthly recap drafts for the Sky Journal timeline.
+- [x] AI title generation for saved sky moments.
+- [x] Monthly recap drafts for the Sky Journal timeline.
+- [x] Month-grouped Sky Journal archive with collapsible months.
 - [ ] Rewrite an older saved note from the dashboard edit flow, only if the UX stays compact and user-approved.

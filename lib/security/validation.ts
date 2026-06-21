@@ -22,6 +22,8 @@ export const skyMomentSchema = z.object({
   cityId: z.string().uuid(),
   weatherSnapshotId: z.string().uuid(),
   photoId: z.string().uuid().optional(),
+  title: z.string().trim().min(1).max(80).optional().nullable(),
+  moodTags: z.array(z.string().trim().min(1).max(24)).max(5).optional().nullable(),
   note: z.string().trim().max(1200).optional().default(""),
   attachMockPhoto: z.boolean().optional().default(false),
 });

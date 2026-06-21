@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Camera, Check, ChevronDown, Copy, LoaderCircle, RefreshCw, Save, Sparkles } from "lucide-react";
+import { Camera, Check, ChevronDown, Copy, LoaderCircle, RefreshCw, Save, Sparkles, Tag } from "lucide-react";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { journalEnhancementStyles, type JournalEnhancementStyle } from "@/lib/ai/journal-styles";
 
 const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
@@ -41,14 +42,24 @@ export function SaveMomentForm({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [message, setMessage] = useState("");
+  const [title, setTitle] = useState("");
+  const [moodTagsInput, setMoodTagsInput] = useState("");
   const [aiStyle, setAiStyle] = useState<JournalEnhancementStyle>("Aesthetic");
   const [aiStatus, setAiStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [aiError, setAiError] = useState("");
   const [aiMessage, setAiMessage] = useState("");
   const [aiNote, setAiNote] = useState("");
+  const [insightStatus, setInsightStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [insightError, setInsightError] = useState("");
+  const [insightMessage, setInsightMessage] = useState("");
+  const [suggestedTitle, setSuggestedTitle] = useState("");
+  const [suggestedMoodTags, setSuggestedMoodTags] = useState<string[]>([]);
+  const [aiAssistantOpen, setAiAssistantOpen] = useState(false);
+  const [insightOpen, setInsightOpen] = useState(false);
   const router = useRouter();
   const cinematic = variant === "cinematic";
   const aiConfigured = Boolean(aiEnabled);
+  const currentMoodTags = parseMoodTagsInput(moodTagsInput);
   const sectionClass = cinematic
     ? "rounded-2xl border border-skyInk/10 bg-[#eef4f1] p-6 text-skyInk shadow-[0_22px_70px_rgba(0,0,0,0.18)] sm:p-7"
     : "rounded-xl border border-skyInk/10 bg-cloud p-6 shadow-soft";
@@ -72,9 +83,22 @@ export function SaveMomentForm({
     return "";
   }
 
+  function parseMoodTagsInput(value: string) {
+    return value
+      .split(",")
+      .map((tag) => tag.trim().toLowerCase())
+      .filter(Boolean)
+      .slice(0, 5);
+  }
+
+  function formatMoodTagsInput(tags: string[]) {
+    return tags.join(", ");
+  }
+
   async function enhanceNote() {
     if (!aiConfigured || note.trim().length < 3 || aiStatus === "loading") return;
 
+    setAiAssistantOpen(true);
     setAiStatus("loading");
     setAiError("");
     setAiMessage("");
@@ -103,17 +127,90 @@ export function SaveMomentForm({
 
       if (!response.ok || !payload?.enhancedNote) {
         setAiStatus("error");
+        setAiAssistantOpen(true);
         setAiError(response.status === 429 && payload?.error ? payload.error : "Could not polish this note right now.");
         return;
       }
 
       setAiNote(payload.enhancedNote);
       setAiStatus("ready");
+      setAiAssistantOpen(true);
       setAiMessage("AI-polished note ready.");
     } catch {
       setAiStatus("error");
+      setAiAssistantOpen(true);
       setAiError("Could not polish this note right now.");
     }
+  }
+
+  async function suggestTitleAndMood() {
+    const journalNote = aiNote.trim() || note.trim();
+    if (!aiConfigured || journalNote.length < 3 || insightStatus === "loading") return;
+
+    setInsightOpen(true);
+    setInsightStatus("loading");
+    setInsightError("");
+    setInsightMessage("");
+
+    try {
+      const response = await fetch("/api/ai/journal-insights", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          note: journalNote,
+          style: aiStyle,
+          city: cityName,
+          condition,
+          temperature,
+          units,
+          capturedAt,
+          favoriteLabel,
+          hasPhoto: photoPresent,
+        }),
+      });
+
+      const payload = (await response.json().catch(() => null)) as {
+        error?: string;
+        title?: string;
+        moodTags?: string[];
+      } | null;
+
+      if (!response.ok || !payload?.title || !payload?.moodTags?.length) {
+        setInsightStatus("error");
+        setInsightOpen(true);
+        setInsightError(response.status === 429 && payload?.error ? payload.error : "Could not suggest a title right now.");
+        return;
+      }
+
+      setSuggestedTitle(payload.title);
+      setSuggestedMoodTags(payload.moodTags.slice(0, 5));
+      setInsightStatus("ready");
+      setInsightOpen(true);
+      setInsightError("");
+      setInsightMessage("AI title and mood tags ready.");
+    } catch {
+      setInsightStatus("error");
+      setInsightOpen(true);
+      setInsightError("Could not suggest a title right now.");
+    }
+  }
+
+  function applySuggestedInsights() {
+    if (!suggestedTitle && suggestedMoodTags.length === 0) return;
+    if (suggestedTitle) setTitle(suggestedTitle);
+    if (suggestedMoodTags.length > 0) setMoodTagsInput(formatMoodTagsInput(suggestedMoodTags));
+    setInsightError("");
+    setInsightMessage("Applied AI title and mood tags.");
+  }
+
+  function clearSuggestedInsights() {
+    setTitle("");
+    setMoodTagsInput("");
+    setSuggestedTitle("");
+    setSuggestedMoodTags([]);
+    setInsightStatus("idle");
+    setInsightError("");
+    setInsightMessage("Cleared the AI suggestions.");
   }
 
   function handleUseEnhancedNote() {
@@ -238,6 +335,8 @@ export function SaveMomentForm({
         cityId,
         weatherSnapshotId,
         photoId,
+        title: title.trim() || null,
+        moodTags: parseMoodTagsInput(moodTagsInput),
         note,
         attachMockPhoto: gcsEnabled ? false : attachMockPhoto,
       }),
@@ -309,48 +408,63 @@ export function SaveMomentForm({
             placeholder="First day of college, rain before the train, sunset after exams..."
           />
         </div>
-        <div className="rounded-xl border border-slate-200 bg-[#eef4f1] p-4 text-slate-950 shadow-[0_14px_40px_rgba(15,23,42,0.10)]">
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-              <div className="max-w-2xl">
-                <p className="text-sm font-semibold text-slate-950">AI note assistant</p>
-                <p className="mt-1 text-sm leading-6 text-slate-700">
-                  Polish your note while keeping your original meaning.
-                </p>
+        <CollapsibleSection
+          action={null}
+          className="border-slate-200 bg-[#eef4f1] text-slate-950 shadow-[0_14px_40px_rgba(15,23,42,0.10)]"
+          contentClassName="pt-0"
+          defaultOpen={false}
+          open={aiAssistantOpen}
+          subtitle={
+            aiStatus === "loading"
+              ? "Polishing your journal note in the chosen style."
+              : aiStatus === "ready" && aiNote
+                ? "Review the polished version before saving."
+                : aiError || aiMessage || "Polish your journal note in a chosen style."
+          }
+          summary={
+            aiStatus === "ready" && aiNote
+              ? "AI-polished note ready"
+              : aiStatus === "loading"
+                ? "Working on your note"
+                : "Optional"
+          }
+          title="Enhance note with AI"
+          variant="light"
+          onOpenChange={setAiAssistantOpen}
+        >
+          <div className="space-y-4 px-4 pb-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div className="min-w-0 sm:max-w-2xl">
+                <label className="mb-1.5 block text-sm font-medium text-slate-700" htmlFor="ai-style">
+                  Writing style
+                </label>
+                <div className="relative">
+                  <select
+                    id="ai-style"
+                    className="w-full appearance-none rounded-xl border border-slate-300 bg-white px-4 py-2.5 pr-10 text-sm font-medium text-slate-950 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400/20 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-700 disabled:opacity-100"
+                    disabled={aiStatus === "loading"}
+                    value={aiStyle}
+                    onChange={(event) => setAiStyle(event.target.value as JournalEnhancementStyle)}
+                  >
+                    {journalEnhancementStyles.map((style) => (
+                      <option key={style} value={style}>
+                        {style}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown aria-hidden className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
+                </div>
               </div>
               {aiConfigured ? (
-                <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-end sm:justify-end">
-                  <div className="min-w-0 sm:min-w-56">
-                    <label className="mb-1.5 block text-sm font-medium text-slate-700" htmlFor="ai-style">
-                      Writing style
-                    </label>
-                    <div className="relative">
-                      <select
-                        id="ai-style"
-                        className="w-full appearance-none rounded-xl border border-slate-300 bg-white px-4 py-2.5 pr-10 text-sm font-medium text-slate-950 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400/20 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-700 disabled:opacity-100"
-                        disabled={aiStatus === "loading"}
-                        value={aiStyle}
-                        onChange={(event) => setAiStyle(event.target.value as JournalEnhancementStyle)}
-                      >
-                        {journalEnhancementStyles.map((style) => (
-                          <option key={style} value={style}>
-                            {style}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown aria-hidden className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
-                    </div>
-                  </div>
-                  <button
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400/40 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:opacity-100"
-                    disabled={aiStatus === "loading" || note.trim().length < 3}
-                    type="button"
-                    onClick={() => void enhanceNote()}
-                  >
-                    {aiStatus === "loading" ? <LoaderCircle aria-hidden className="size-4 animate-spin" /> : <Sparkles aria-hidden className="size-4" />}
-                    {aiStatus === "loading" ? "Polishing your sky note..." : "Enhance with AI"}
-                  </button>
-                </div>
+                <button
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400/40 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:opacity-100"
+                  disabled={aiStatus === "loading" || note.trim().length < 3}
+                  type="button"
+                  onClick={() => void enhanceNote()}
+                >
+                  {aiStatus === "loading" ? <LoaderCircle aria-hidden className="size-4 animate-spin" /> : <Sparkles aria-hidden className="size-4" />}
+                  {aiStatus === "loading" ? "Polishing your sky note..." : "Enhance with AI"}
+                </button>
               ) : (
                 <div className="inline-flex min-h-11 items-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700">
                   AI enhancement is not configured yet.
@@ -358,9 +472,7 @@ export function SaveMomentForm({
               )}
             </div>
 
-            {aiStatus === "loading" ? (
-              <p className="text-sm text-slate-700">Polishing your sky note...</p>
-            ) : null}
+            {aiStatus === "loading" ? <p className="text-sm text-slate-700">Polishing your sky note...</p> : null}
 
             {aiNote ? (
               <div className="overflow-hidden rounded-xl border border-slate-300 bg-white shadow-[0_10px_30px_rgba(15,23,42,0.08)]">
@@ -419,7 +531,157 @@ export function SaveMomentForm({
             {aiError ? <p className="text-sm font-medium text-red-700">{aiError}</p> : null}
             {aiMessage ? <p className="text-sm font-medium text-slate-700">{aiMessage}</p> : null}
           </div>
-        </div>
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          action={null}
+          className="border-slate-200 bg-[#f4f7f4] text-slate-950 shadow-[0_14px_40px_rgba(15,23,42,0.08)]"
+          contentClassName="pt-0"
+          defaultOpen={false}
+          open={insightOpen}
+          subtitle={
+            insightStatus === "ready" && (suggestedTitle || suggestedMoodTags.length > 0)
+              ? "Review the suggested title and mood tags before saving."
+              : insightError || insightMessage || "Generate or edit a short title and up to 5 tags."
+          }
+          summary={
+            title.trim() || currentMoodTags.length > 0
+              ? `${title.trim() || "Untitled"} · ${currentMoodTags.length} tag${currentMoodTags.length === 1 ? "" : "s"}`
+              : "Optional"
+          }
+          title="Add title & mood tags"
+          variant="light"
+          onOpenChange={setInsightOpen}
+        >
+          <div className="space-y-4 px-4 pb-4">
+            <div className="flex items-center gap-2">
+              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-slate-950 text-white">
+                <Tag aria-hidden className="size-4" />
+              </span>
+              <div className="max-w-2xl">
+                <p className="text-sm leading-6 text-slate-700">
+                  Optional. Add a short title and a few mood tags for this sky moment.
+                </p>
+              </div>
+              {aiConfigured ? (
+                <button
+                  className="ml-auto inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400/40 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:opacity-100"
+                  disabled={insightStatus === "loading" || (aiNote.trim().length < 3 && note.trim().length < 3)}
+                  type="button"
+                  onClick={() => void suggestTitleAndMood()}
+                >
+                  {insightStatus === "loading" ? <LoaderCircle aria-hidden className="size-4 animate-spin" /> : <Sparkles aria-hidden className="size-4" />}
+                  {insightStatus === "loading" ? "Suggesting title..." : "Suggest with AI"}
+                </button>
+              ) : (
+                <div className="ml-auto inline-flex min-h-11 items-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700">
+                  AI enhancement is not configured yet.
+                </div>
+              )}
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="text-sm font-semibold text-slate-950" htmlFor="moment-title">
+                  Title
+                </label>
+                <input
+                  id="moment-title"
+                  className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-950 placeholder:text-slate-500 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-700 disabled:placeholder:text-slate-500 disabled:opacity-100"
+                  maxLength={80}
+                  placeholder="Rain Before the Grind"
+                  value={title}
+                  onChange={(event) => setTitle(event.target.value)}
+                />
+                <p className="mt-2 text-xs text-slate-600">Optional. Short and descriptive works best.</p>
+              </div>
+              <div>
+                <label className="text-sm font-semibold text-slate-950" htmlFor="moment-tags">
+                  Mood tags
+                </label>
+                <input
+                  id="moment-tags"
+                  className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-950 placeholder:text-slate-500 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-700 disabled:placeholder:text-slate-500 disabled:opacity-100"
+                  maxLength={160}
+                  placeholder="focused, rainy, calm, growth"
+                  value={moodTagsInput}
+                  onChange={(event) => setMoodTagsInput(event.target.value)}
+                />
+                <p className="mt-2 text-xs text-slate-600">Comma-separated, up to 5 simple tags.</p>
+              </div>
+            </div>
+
+            {aiConfigured && (suggestedTitle || suggestedMoodTags.length > 0) ? (
+              <div className="overflow-hidden rounded-xl border border-slate-300 bg-white shadow-[0_10px_30px_rgba(15,23,42,0.08)]">
+                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 px-4 py-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      AI title suggestion
+                    </p>
+                    <p className="mt-1 text-sm text-slate-700">Review this before saving your moment.</p>
+                  </div>
+                  {aiStyle ? (
+                    <span className="rounded-full border border-slate-300 bg-slate-100 px-3 py-1 text-[0.68rem] font-semibold text-slate-800">
+                      {aiStyle}
+                    </span>
+                  ) : null}
+                </div>
+                <div className="space-y-4 p-4">
+                  {suggestedTitle ? (
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Title</p>
+                      <p className="mt-1 text-[1.02rem] font-semibold leading-7 text-slate-950">{suggestedTitle}</p>
+                    </div>
+                  ) : null}
+                  {suggestedMoodTags.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {suggestedMoodTags.map((tag) => (
+                        <span
+                          className="rounded-full border border-slate-300 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-800"
+                          key={tag}
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-slate-950 px-3 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400/40 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:opacity-100"
+                      disabled={insightStatus === "loading" || (!suggestedTitle && suggestedMoodTags.length === 0)}
+                      type="button"
+                      onClick={applySuggestedInsights}
+                    >
+                      <Check aria-hidden className="size-4" />
+                      Use suggestions
+                    </button>
+                    <button
+                      className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400/30 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 disabled:opacity-100"
+                      disabled={insightStatus === "loading"}
+                      type="button"
+                      onClick={() => void suggestTitleAndMood()}
+                    >
+                      <RefreshCw aria-hidden className="size-4" />
+                      Regenerate
+                    </button>
+                    <button
+                      className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400/30 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 disabled:opacity-100"
+                      disabled={insightStatus === "loading"}
+                      type="button"
+                      onClick={clearSuggestedInsights}
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {insightStatus === "loading" ? <p className="text-sm text-slate-700">Suggesting a title and mood tags...</p> : null}
+            {insightError ? <p className="text-sm font-medium text-red-700">{insightError}</p> : null}
+            {insightMessage ? <p className="text-sm font-medium text-slate-700">{insightMessage}</p> : null}
+          </div>
+        </CollapsibleSection>
         {gcsEnabled ? (
           <div className={inputSurfaceClass}>
             <label className="flex items-center gap-3 text-sm font-semibold text-skyInk" htmlFor="sky-photo">

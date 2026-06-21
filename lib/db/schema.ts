@@ -222,6 +222,8 @@ export const skyMoments = pgTable(
       .notNull()
       .references(() => weatherSnapshots.id, { onDelete: "cascade" }),
     photoId: uuid("photo_id").references(() => skyPhotos.id, { onDelete: "set null" }),
+    title: varchar("title", { length: 80 }),
+    moodTags: jsonb("mood_tags").$type<string[] | null>(),
     note: text("note"),
     capturedAt: timestamp("captured_at", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

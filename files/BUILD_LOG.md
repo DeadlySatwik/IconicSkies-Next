@@ -142,3 +142,44 @@
 - Model behavior: default Groq model is `llama-3.3-70b-versatile`; `GROQ_MODEL` can override it and `GROQ_FALLBACK_MODEL` is attempted only when the primary provider response fails before producing a usable response.
 - Prompt behavior: the system prompt is now style-specific and explicitly preserves non-weather activity context, weather mood, and technical terms such as DSA.
 - Safety behavior: validation rejects only empty output, very short output, punctuation fragments, unfinished phrases, or output that drops all meaningful original context.
+
+## 2026-06-21 - AI Journal V2 and V3
+
+- Files created: `app/api/ai/journal-insights/route.ts`, `app/api/ai/monthly-recap/route.ts`, `lib/ai/monthly-recap.ts`, `lib/sky/monthly-recap.ts`, `components/sky/monthly-sky-recap.tsx`, `migrations/0003_ai_journal_insights.sql`.
+- Files modified: `lib/db/schema.ts`, `lib/security/validation.ts`, `lib/dev/fallback-store.ts`, `lib/sky/service.ts`, `components/sky/save-moment-form.tsx`, `components/sky/timeline.tsx`, `app/api/sky-moments/route.ts`, `app/dashboard/page.tsx`, `app/page.tsx`, `tests/e2e/vertical-slice.spec.ts`, `files/DATABASE_NOTES.md`, `files/ARCHITECTURE.md`, `files/DESIGN.md`, `files/HANDOFF.md`, `files/TODO.md`.
+- Major decisions: add nullable `title` and JSONB `mood_tags` columns to `sky_moments`; keep title/tag suggestions optional and user-approved in the save form; host monthly recap on the dashboard as an on-demand card with month navigation; reuse the existing Groq transport for both new AI routes.
+- Prompt behavior: journal insights return strict JSON for a compact title plus mood tags, while monthly recap summarizes at most 20 moments with truncated excerpts and no stored recap history.
+- UX behavior: the save form now includes a compact "Title & mood" block with AI suggestions, while the dashboard gets a new monthly recap card with month navigation, summary chips, and a generate button.
+- Commands run: `npm run typecheck`, `npm run lint`, `npm run build`, `npm run test:e2e`.
+- Quality results: typecheck passed, lint passed, production build passed, and Playwright e2e could not start because the configured web server exited early.
+
+## 2026-06-21 - Groq JSON Parser Fix
+
+- Files modified: `lib/ai/groq.ts`, `app/api/ai/journal-insights/route.ts`, `app/api/ai/monthly-recap/route.ts`, `components/sky/save-moment-form.tsx`, `tests/e2e/vertical-slice.spec.ts`, `files/HANDOFF.md`.
+- Parser fix: journal insights and monthly recap now extract `choices[0].message.content` from the Groq chat-completion wrapper before parsing JSON and validating with Zod.
+- Robustness behavior: the shared Groq helper now accepts raw JSON, fenced JSON, or a JSON object embedded in surrounding text; route logs include only sanitized model-content previews and Zod issue summaries.
+- Provider behavior: strict provider JSON mode was removed from the two JSON routes so fallback models do not fail before app-side parsing and validation.
+- UI/test fix: successful title/tag suggestions clear stale error text, and the Playwright duplicate-text assertion is scoped to the `Sky Journal timeline` region.
+- Commands run: `npm run typecheck`, `npm run lint`, `npm run build`, `npm run test:e2e`.
+- Quality results: typecheck passed, lint passed, production build passed, and Playwright passed 7/8 with the desktop-only landing video check skipped on the mobile project. The e2e run required sandbox escalation because the local Next dev server bind is blocked in the normal sandbox.
+
+## 2026-06-21 - Monthly Recap JSON Tolerance
+
+- Files modified: `lib/ai/groq.ts`, `lib/ai/monthly-recap.ts`, `app/api/ai/monthly-recap/route.ts`.
+- Parser fix: control characters are normalized out of extracted JSON text before `JSON.parse`, which prevents the `Bad control character in string literal` failure seen in monthly recap content.
+- Schema fix: monthly recap now accepts `highlights` and `dominantMoods` as either arrays or comma/newline-delimited strings, then normalizes both to capped string arrays before validation.
+- Provider behavior: monthly recap now uses the primary Groq model only and does not fall back to `qwen/qwen3-32b`; if the first pass is malformed, the route performs one compact repair pass on the same primary model.
+- Prompt behavior: the monthly recap prompt now explicitly asks for JSON-only output, no newlines inside string values, and array-typed `highlights` / `dominantMoods`, with an exact example payload.
+- Commands run: `npm run typecheck`, `npm run lint`, `npm run build`, `npm run test:e2e`.
+- Quality results: typecheck passed, lint passed, production build passed, and Playwright passed 7/8 with one expected mobile skip.
+
+## 2026-06-21 - Progressive Disclosure Pass
+
+- Files created: `components/ui/collapsible-section.tsx`.
+- Files modified: `app/dashboard/page.tsx`, `components/sky/monthly-sky-recap.tsx`, `components/sky/save-moment-form.tsx`, `components/sky/timeline.tsx`, `components/favorites/favorite-locations-grid.tsx`, `lib/sky/monthly-recap.ts`, `playwright.config.ts`, `tests/e2e/vertical-slice.spec.ts`, `files/DESIGN.md`, `files/ARCHITECTURE.md`, `files/TODO.md`, `files/BUILD_LOG.md`, `files/HANDOFF.md`.
+- Major decisions: use a reusable accessible disclosure primitive for optional product surfaces, keep `Current Sky` visible, collapse `Monthly Sky Recap` and `Favorite skies` by default, and group the journal archive by month with the current month open first.
+- Save-form behavior: move AI note enhancement and AI title/mood tools into optional collapsible panels that preserve state and never fetch on open.
+- Dashboard behavior: wrap monthly recap and favorite locations in collapsible sections, and render the timeline as month-grouped collapsible archives with counts in the headers.
+- Test behavior: the Playwright config now supports `PLAYWRIGHT_SKIP_WEBSERVER=1` for environments where an already-running localhost dev server should be reused.
+- Commands run: `npm run typecheck`, `npm run lint`, `npm run build`, `PLAYWRIGHT_SKIP_WEBSERVER=1 PLAYWRIGHT_BASE_URL=http://localhost:3000 npm run test:e2e`.
+- Quality results: typecheck passed, lint passed, production build passed, and Playwright passed 7/8 with the desktop-only landing video check skipped on the mobile project.

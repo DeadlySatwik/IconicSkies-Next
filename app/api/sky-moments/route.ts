@@ -14,6 +14,8 @@ export async function POST(request: Request) {
     cityId: parsed.data.cityId,
     weatherSnapshotId: parsed.data.weatherSnapshotId,
     photoId: parsed.data.photoId,
+    title: parsed.data.title ?? null,
+    moodTags: parsed.data.moodTags ?? null,
     note: parsed.data.note,
     attachMockPhoto: parsed.data.attachMockPhoto,
   }).catch(() => null);

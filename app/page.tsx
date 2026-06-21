@@ -133,6 +133,10 @@ function LandingPreview({
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(moment.capturedAt));
+  const title = moment.title?.trim() || null;
+  const moodTags = Array.isArray(moment.moodTags)
+    ? moment.moodTags.filter((tag): tag is string => typeof tag === "string" && tag.trim().length > 0).slice(0, 4)
+    : [];
   const note = moment.note?.trim() || moment.description || "Weather snapshot saved.";
   const photoLabel = moment.photoId ? (moment.isMockPhoto ? "Mock photo" : "Uploaded photo") : null;
   const photoSrc = moment.photoId ? `/api/photos/${moment.photoId}` : null;
@@ -207,6 +211,7 @@ function LandingPreview({
       <div className="space-y-4 px-5 py-4 sm:px-6 sm:py-5">
         <div className="grid gap-2.5">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-aurora">Latest sky moment</p>
+          {title ? <p className="text-sm font-semibold uppercase tracking-[0.16em] text-cloud/64">{title}</p> : null}
           <h2 className="max-w-[22ch] text-balance text-[1.4rem] font-medium leading-[1.18] text-cloud sm:text-[1.7rem]">
             {note}
           </h2>
@@ -221,6 +226,15 @@ function LandingPreview({
             <span className="inline-flex items-center gap-2 rounded-full bg-white/6 px-2.5 py-1.5">
               {photoLabel}
             </span>
+          ) : null}
+          {moodTags.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {moodTags.map((tag) => (
+                <span key={tag} className="rounded-full bg-white/6 px-2.5 py-1.5 font-semibold text-cloud/78">
+                  {tag}
+                </span>
+              ))}
+            </div>
           ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-3">

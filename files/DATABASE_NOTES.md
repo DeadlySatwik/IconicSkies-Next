@@ -19,6 +19,8 @@ The schema intentionally uses PostgreSQL 18 features through raw SQL migrations 
 - Sky Journal timeline by user and captured time.
 - Favorite city lookup by user and city.
 - Favorite location lookup by user, label, and city identity, with optional rounded coordinates for privacy.
+- Sky moment AI metadata lookup by user and captured time via nullable `title` and JSONB `mood_tags`.
+- Monthly recap generation is on demand and uses existing sky moments only; recap history is not stored in the database.
 - Current-location preview does not persist until the user explicitly saves it as a favorite.
 
 ## Favorite Locations
@@ -27,6 +29,8 @@ The schema intentionally uses PostgreSQL 18 features through raw SQL migrations 
 - Rows are owned by one user, carry a display label, and store city identity plus optional rounded lat/lon.
 - Uniqueness is enforced on a per-user location key so duplicate favorites for the same city or coordinate identity and label are avoided.
 - `favorite_cities` is intentionally left legacy-only and unchanged.
+- `sky_moments.title` and `sky_moments.mood_tags` are nullable additions for AI-assisted journal metadata. Older moments continue to work unchanged when the columns are null.
+- `mood_tags` is stored as `jsonb` string arrays so the app can persist optional tags without introducing a new table.
 
 ## Local Commands
 

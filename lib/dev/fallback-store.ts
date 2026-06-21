@@ -55,6 +55,8 @@ type FallbackMoment = {
   cityId: string;
   weatherSnapshotId: string;
   photoId: string | null;
+  title: string | null;
+  moodTags: string[] | null;
   note: string | null;
   capturedAt: Date;
   createdAt: Date;
@@ -209,6 +211,8 @@ export function createFallbackMoment(input: {
   cityId: string;
   weatherSnapshotId: string;
   photoId?: string;
+  title?: string | null;
+  moodTags?: string[] | null;
   note: string;
 }) {
   const state = getState();
@@ -219,6 +223,8 @@ export function createFallbackMoment(input: {
     cityId: input.cityId,
     weatherSnapshotId: input.weatherSnapshotId,
     photoId: input.photoId ?? null,
+    title: input.title?.trim() || null,
+    moodTags: input.moodTags && input.moodTags.length > 0 ? input.moodTags : null,
     note: input.note,
     capturedAt: now,
     createdAt: now,
@@ -242,6 +248,8 @@ export function listFallbackMoments(userId: string) {
       ...moment,
       cityName: city?.name ?? "Unknown city",
       country: city?.country ?? null,
+      title: moment.title,
+      moodTags: moment.moodTags,
       temperature: snapshot?.temperature ?? 0,
       units: snapshot?.units ?? "metric",
       condition: snapshot?.condition ?? "Clouds",

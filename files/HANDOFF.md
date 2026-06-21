@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Complete vertical slice implemented.
+Complete vertical slice implemented, plus AI Journal Enhancement, AI title/tag suggestions, and dashboard monthly recap.
 
 ## Current State
 
@@ -134,6 +134,13 @@ Update on 2026-06-18: favorite locations are now implemented. Signed-in users ca
 - Update on 2026-06-20: the AI API now returns only the enhanced note text, and the client treats the response as a simple note suggestion flow.
 - Update on 2026-06-20: the AI assistant now uses a readable writing-style dropdown, higher-contrast surfaces, and a stricter prompt that preserves concrete details from the user's original note.
 - Update on 2026-06-21: AI Journal Enhancement now uses Groq instead of Gemini. Configure `GROQ_API_KEY`, with `GROQ_MODEL=llama-3.3-70b-versatile` by default and optional `GROQ_FALLBACK_MODEL=qwen/qwen3-32b`.
+- Update on 2026-06-21: Sky Journal moments now optionally store AI-suggested `title` and `mood_tags`, and the dashboard includes an on-demand monthly recap card with month navigation and a generate button.
+- Update on 2026-06-21: journal insights and monthly recap now parse the extracted Groq message content instead of validating the full chat-completion response wrapper. The routes log sanitized model-content previews plus Zod issue summaries on parse failures.
+- Latest verification on 2026-06-21: `npm run typecheck`, `npm run lint`, `npm run build`, and escalated `npm run test:e2e` passed. Playwright reported 7 passed and 1 skipped because the landing video toggle is desktop-only on the mobile project.
+- Update on 2026-06-21: monthly recap JSON parsing now tolerates raw control characters and normalizes `highlights` / `dominantMoods` from string-or-array into capped arrays. The monthly recap route now uses only the primary Groq model and performs one repair pass instead of falling back to Qwen.
+- Latest verification on 2026-06-21: `npm run typecheck`, `npm run lint`, `npm run build`, and escalated `npm run test:e2e` passed. Playwright reported 7 passed and 1 skipped because the landing video toggle is desktop-only on the mobile project.
+- Update on 2026-06-21: dashboard and save-form optional surfaces now use a reusable collapsible section primitive, with month-grouped timeline archives and compact headers that preserve state when closed.
+- Latest verification on 2026-06-21: `npm run typecheck`, `npm run lint`, `npm run build`, and `PLAYWRIGHT_SKIP_WEBSERVER=1 PLAYWRIGHT_BASE_URL=http://localhost:3000 npm run test:e2e` passed. Playwright reported 7 passed and 1 skipped because the landing video toggle is desktop-only on the mobile project.
 
 ## Exact Next Steps
 
@@ -145,8 +152,11 @@ Update on 2026-06-18: favorite locations are now implemented. Signed-in users ca
 6. If original filenames should appear in the UI later, add an explicit migration for `sky_photos.original_filename`.
 7. Add focused unit coverage for weather mood resolution edge cases if the resolver grows more complex.
 8. Consider unit tests for favorite-location identity matching and current-location privacy behavior if the slice is extended further.
-9. Consider adding an AI title generator or monthly recap drafts later if the journal assistant proves useful.
-10. Set `GROQ_API_KEY` in production if AI note enhancement should be available to signed-in users.
+9. Rewrite an older saved note from the dashboard edit flow only if the UX stays compact and user-approved.
+10. Set `GROQ_API_KEY` in production if AI note enhancement and journal insights should be available to signed-in users.
+11. Manually verify `Suggest with AI` and `Generate monthly recap` against the live Groq key in localhost to confirm provider content quality, not just route/build correctness.
+12. Add focused unit tests for the month summary helpers, Groq JSON content parsing, and insight quality guards if the slice expands.
+13. If the dashboard grows more sections, consider reusing `components/ui/collapsible-section.tsx` for any new optional panels so the disclosure pattern stays consistent.
 
 ## Resume Prompt
 
