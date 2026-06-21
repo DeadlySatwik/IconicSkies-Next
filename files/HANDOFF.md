@@ -143,6 +143,8 @@ Update on 2026-06-18: favorite locations are now implemented. Signed-in users ca
 - Latest verification on 2026-06-21: `npm run typecheck`, `npm run lint`, `npm run build`, and `PLAYWRIGHT_SKIP_WEBSERVER=1 PLAYWRIGHT_BASE_URL=http://localhost:3000 npm run test:e2e` passed. Playwright reported 7 passed and 1 skipped because the landing video toggle is desktop-only on the mobile project.
 - Update on 2026-06-21: Redis caching and rate limiting are now in place. Monthly recap caches by user/month/journal version, weather previews cache by city and rounded coordinates, and AI routes use optional Redis-backed throttles that fail open when env vars are missing.
 - Latest verification on 2026-06-21: `npm run typecheck`, `npm run lint`, `npm run build`, and `PLAYWRIGHT_SKIP_WEBSERVER=1 PLAYWRIGHT_BASE_URL=http://localhost:3000 npm run test:e2e` passed. Playwright reported 7 passed and 1 skipped because the landing video toggle is desktop-only on the mobile project.
+- Update on 2026-06-22: OTP validation now sits alongside password auth. Email verification is backed by Redis-only challenges, login remains password-first unless `otp_required=true`, and registration stays non-blocking so current Playwright flows keep working. SMS support remains provider-shaped and disabled unless configured.
+- Verification note on 2026-06-22: `npm run typecheck`, `npm run lint`, and `npm run build` passed after the OTP pass. Playwright e2e could not finish in this sandbox because Chromium failed to launch with a Linux sandbox permission error, so browser smoke coverage needs a rerun in a less constrained environment.
 
 ## Exact Next Steps
 
@@ -158,6 +160,8 @@ Update on 2026-06-18: favorite locations are now implemented. Signed-in users ca
 10. Add focused unit tests for the month summary helpers, Groq JSON content parsing, and insight quality guards if the slice expands.
 11. If the dashboard grows more sections, consider reusing `components/ui/collapsible-section.tsx` for any new optional panels so the disclosure pattern stays consistent.
 12. Keep Redis optional in local development; the app should still function normally when the Upstash env vars are absent.
+13. If OTP settings grow, keep the verification prompt in Settings as the main place for email/phone verification and keep register/login additive rather than blocking existing users.
+14. Rerun Playwright smoke tests in an environment that permits Chromium to start cleanly; the failure here was a sandbox-launch issue, not an app runtime crash.
 
 ## Resume Prompt
 

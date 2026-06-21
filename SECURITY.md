@@ -10,10 +10,13 @@ IconicSkies treats browser input as untrusted. Secrets remain server-side, and p
 - GCS service account values are read only on the server.
 - Auth uses credentials with password hashing and HttpOnly SameSite cookies.
 - Session tokens are stored hashed in PostgreSQL.
+- Optional OTP verification uses Redis only for short-lived challenges. OTP codes are HMAC-hashed before storage, challenges expire after 240 seconds by default, resend cooldown is 60 seconds, and the browser never receives plaintext codes or Redis secrets.
+- Email OTP is the first-class channel. SMS remains a provider-shaped stub unless SMS environment variables are configured.
 - Upload endpoints validate file type, size, ownership, and configuration state.
 - Direct GCS uploads use server-generated signed URLs. The browser receives no GCS service account credentials.
 - Private GCS photo display goes through `/api/photos/[id]`, which checks the signed-in user owns the photo before downloading it server-side.
 - Missing external credentials trigger safe mock/demo behavior, not secret prompts.
+- OTP request and verification responses stay generic and do not reveal whether an account exists.
 
 ## Threat Areas
 
@@ -52,6 +55,7 @@ The service account used by the server needs only these bucket-level roles:
 - `roles/storage.objectViewer` for private server-side photo display.
 
 The browser must never receive service account credentials. Keep `GCS_PROJECT_ID`, `GCS_CLIENT_EMAIL`, and `GCS_PRIVATE_KEY` server-side only.
+Keep `OTP_SECRET` or `AUTH_SECRET` server-side only as well; they are used to HMAC-hash OTP identifiers and codes before anything reaches Redis.
 
 Bucket CORS must allow direct signed uploads:
 

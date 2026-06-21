@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { LoaderCircle } from "lucide-react";
+import { OtpVerificationForm } from "@/components/auth/otp-verification-form";
 
 type AuthMode = "login" | "register";
 
@@ -11,11 +12,15 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [otpRequired, setOtpRequired] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState("");
+  const [otpMessage, setOtpMessage] = useState("");
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
     setError("");
+    setOtpMessage("");
 
     const formData = new FormData(event.currentTarget);
     const body =
@@ -38,7 +43,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
 
     const payload = (response.headers.get("content-type")?.includes("application/json")
       ? await response.json().catch(() => null)
-      : null) as { ok?: boolean; error?: string } | null;
+      : null) as { ok?: boolean; error?: string; otpRequired?: boolean; message?: string } | null;
 
     if (!response.ok || !payload?.ok) {
       setError(payload?.error ?? "Authentication failed.");
@@ -46,11 +51,62 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
       return;
     }
 
+    if (mode === "login" && payload.otpRequired) {
+      setPendingEmail(body.email);
+      setOtpRequired(true);
+      setOtpMessage(payload.message ?? "Check your email for a verification code.");
+      setLoading(false);
+      return;
+    }
+
+    if (mode === "register") {
+      router.push("/dashboard?verify=email");
+      router.refresh();
+      return;
+    }
+
+    router.push("/dashboard");
+    router.refresh();
+  }
+
+  function handleOtpVerified() {
+    setOtpRequired(false);
+    setPendingEmail("");
+    setError("");
+    setOtpMessage("");
     router.push("/dashboard");
     router.refresh();
   }
 
   const isRegister = mode === "register";
+
+  if (mode === "login" && otpRequired) {
+    return (
+      <div className="space-y-4">
+        <OtpVerificationForm
+          purpose="login"
+          channel="email"
+          identifier={pendingEmail}
+          title="Enter your sign-in code"
+          description={otpMessage || "We sent a code to your email to finish signing in."}
+          initialMessage={otpMessage}
+          onVerified={handleOtpVerified}
+        />
+        <button
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-skyInk/15 px-5 font-semibold text-skyInk transition hover:bg-mist focus:outline-none focus:ring-2 focus:ring-rain"
+          type="button"
+          onClick={() => {
+            setOtpRequired(false);
+            setPendingEmail("");
+            setOtpMessage("");
+            setError("");
+          }}
+        >
+          Back to sign in
+        </button>
+      </div>
+    );
+  }
 
   return (
     <form className="space-y-4" onSubmit={onSubmit} action={`/api/auth/${mode}`} method="post">

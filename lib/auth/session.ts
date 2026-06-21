@@ -76,6 +76,10 @@ export async function getCurrentUser() {
         email: users.email,
         name: users.name,
         role: users.role,
+        emailVerifiedAt: users.emailVerifiedAt,
+        phoneNumber: users.phoneNumber,
+        phoneVerifiedAt: users.phoneVerifiedAt,
+        otpRequired: users.otpRequired,
         expiresAt: sessions.expiresAt,
       })
       .from(sessions)
@@ -95,6 +99,10 @@ export async function getCurrentUser() {
       email: fallbackUser.email,
       name: fallbackUser.name,
       role: fallbackUser.role,
+      emailVerifiedAt: fallbackUser.emailVerifiedAt,
+      phoneNumber: fallbackUser.phoneNumber,
+      phoneVerifiedAt: fallbackUser.phoneVerifiedAt,
+      otpRequired: fallbackUser.otpRequired,
       expiresAt: fallbackSession.expiresAt,
     };
   } catch (error) {
@@ -109,6 +117,10 @@ export async function getCurrentUser() {
       email: user.email,
       name: user.name,
       role: user.role,
+      emailVerifiedAt: user.emailVerifiedAt,
+      phoneNumber: user.phoneNumber,
+      phoneVerifiedAt: user.phoneVerifiedAt,
+      otpRequired: user.otpRequired,
       expiresAt: session.expiresAt,
     };
   }

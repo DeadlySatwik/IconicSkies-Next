@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { verifyPassword } from "@/lib/auth/password";
 import { createSession, setSessionCookie } from "@/lib/auth/session";
+import { issueOtpChallenge } from "@/lib/auth/otp-service";
 import { getDb, isDatabaseConnectionError } from "@/lib/db/client";
 import {
   createFallbackSession,
@@ -29,6 +30,30 @@ export async function POST(request: Request) {
 
     const valid = await verifyPassword(user.passwordHash, parsed.data.password);
     if (!valid) return jsonError("Invalid email or password.", 401);
+
+    if (user.otpRequired) {
+      const challenge = await issueOtpChallenge({
+        channel: "email",
+        purpose: "login",
+        identifier: user.email,
+        subjectUserId: user.id,
+      });
+
+      if (!challenge.ok) {
+        return jsonError("OTP verification is not configured yet.", 503);
+      }
+
+      if (!challenge.resendCoolingDown && !challenge.delivery.delivered && challenge.delivery.reason !== "dev-logged") {
+        return jsonError("OTP verification is not configured yet.", 503);
+      }
+
+      if (!isJson) return NextResponse.json({ ok: true, otpRequired: true, message: "Check your email for a verification code." });
+      return NextResponse.json({
+        ok: true,
+        otpRequired: true,
+        message: "Check your email for a verification code.",
+      });
+    }
 
     const session = await createSession(user.id);
     await setSessionCookie(session.token, session.expiresAt);

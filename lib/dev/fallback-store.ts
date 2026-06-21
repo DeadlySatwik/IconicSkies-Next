@@ -4,6 +4,10 @@ type FallbackUser = {
   id: string;
   email: string;
   emailNormalized: string;
+  emailVerifiedAt: Date | null;
+  phoneNumber: string | null;
+  phoneVerifiedAt: Date | null;
+  otpRequired: boolean;
   name: string;
   passwordHash: string;
   role: string;
@@ -113,6 +117,10 @@ export function createFallbackUser(input: { email: string; name: string; passwor
     id: randomUUID(),
     email: input.email,
     emailNormalized,
+    emailVerifiedAt: null,
+    phoneNumber: null,
+    phoneVerifiedAt: null,
+    otpRequired: false,
     name: input.name,
     passwordHash: input.passwordHash,
     role: "user",
@@ -137,6 +145,24 @@ export function findFallbackUserById(userId: string) {
 
 export function hasFallbackUser(userId: string) {
   return getState().usersById.has(userId);
+}
+
+export function updateFallbackUserById(
+  userId: string,
+  updates: Partial<Pick<FallbackUser, "emailVerifiedAt" | "phoneNumber" | "phoneVerifiedAt" | "otpRequired" | "updatedAt">>,
+) {
+  const user = getState().usersById.get(userId);
+  if (!user) return null;
+
+  const next = {
+    ...user,
+    ...updates,
+    updatedAt: updates.updatedAt ?? new Date(),
+  };
+
+  getState().usersById.set(userId, next);
+  getState().usersByEmail.set(next.emailNormalized, userId);
+  return next;
 }
 
 export function createFallbackSession(userId: string) {

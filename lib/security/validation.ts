@@ -18,6 +18,21 @@ export const loginSchema = z.object({
   password: z.string().min(1).max(128),
 });
 
+export const otpChannelSchema = z.enum(["email", "sms"]);
+export const otpPurposeSchema = z.enum(["register", "login", "verify-contact"]);
+export type OtpChannel = z.infer<typeof otpChannelSchema>;
+export type OtpPurpose = z.infer<typeof otpPurposeSchema>;
+
+export const otpRequestSchema = z.object({
+  channel: otpChannelSchema,
+  identifier: z.string().trim().min(3).max(320),
+  purpose: otpPurposeSchema,
+});
+
+export const otpVerifySchema = otpRequestSchema.extend({
+  code: z.string().trim().regex(/^\d{6}$/, "Code must be a 6-digit number."),
+});
+
 export const skyMomentSchema = z.object({
   cityId: z.string().uuid(),
   weatherSnapshotId: z.string().uuid(),

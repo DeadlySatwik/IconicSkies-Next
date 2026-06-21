@@ -48,12 +48,20 @@ AI journal enhancement is server-only. The browser receives only the polished no
 AI journal insights and monthly recap reuse the same Groq transport and stay server-only. Title/tag suggestions are optional, monthly recap is on-demand only, and neither flow stores recap drafts in the database.
 The dashboard and save form share a reusable client-side collapsible section primitive so optional UI can stay compact without hiding stateful content or triggering network work on open. Monthly journal archive grouping is computed server-side from captured timestamps, then rendered into collapsible month sections with the current month opened first.
 Redis/Upstash is an optional, fail-open cache and throttling layer for derived data only. Monthly recap cache entries are versioned by user/month/journal version, weather cache entries are short-lived and keyed by city or rounded coordinates, and AI rate limiting is enforced server-side when Redis is available but skipped cleanly when it is not.
+OTP validation is additive and password-first. Challenges live only in Redis, identifiers are hashed before they reach any Redis key, OTP codes are HMAC-hashed before storage, and the default login/register path stays unchanged unless a user is explicitly marked `otp_required`.
 
 ## Environment
 
 - `GROQ_API_KEY`: enables the optional journal note enhancement flow. When missing, the UI disables the action gracefully and the route returns a configuration error.
 - `GROQ_MODEL`: optional Groq model override for the journal enhancer. Defaults to `llama-3.3-70b-versatile`.
 - `GROQ_FALLBACK_MODEL`: optional fallback model used only when the primary Groq model fails before returning a usable response.
+- `OTP_SECRET`: optional HMAC secret for Redis OTP challenges. Falls back to `AUTH_SECRET` if present.
+- `OTP_TTL_SECONDS`: optional OTP lifetime in seconds. Defaults to `240`.
+- `OTP_RESEND_COOLDOWN_SECONDS`: optional cooldown between OTP sends in seconds. Defaults to `60`.
+- `OTP_MAX_VERIFY_ATTEMPTS`: optional limit before a challenge is locked. Defaults to `5`.
+- `OTP_DEV_LOG_CODES`: optional dev-only flag that logs OTP codes when set to `true`.
+- `RESEND_API_KEY` / `EMAIL_FROM`: optional email delivery configuration for OTP messages.
+- `SMS_OTP_PROVIDER` / `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` / `TWILIO_FROM`: optional SMS delivery configuration stub for future phone OTP support.
 - `UPSTASH_REDIS_REST_URL`: optional Upstash Redis REST URL for derived-data caching and AI rate limiting.
 - `UPSTASH_REDIS_REST_TOKEN`: optional Upstash Redis REST token for derived-data caching and AI rate limiting.
 - `PLAYWRIGHT_SKIP_WEBSERVER`: optional test-only flag that skips Playwright's web-server bootstrap when a local dev server is already running.

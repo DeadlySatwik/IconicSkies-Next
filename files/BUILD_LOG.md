@@ -1,5 +1,14 @@
 # Build Log
 
+## 2026-06-22 - OTP Validation
+
+- Files modified: `lib/db/schema.ts`, `lib/auth/session.ts`, `lib/dev/fallback-store.ts`, `lib/security/validation.ts`, `lib/auth/otp.ts`, `lib/auth/otp-store.ts`, `lib/auth/otp-service.ts`, `lib/auth/otp-delivery.ts`, `lib/auth/email-otp-provider.ts`, `lib/auth/sms-otp-provider.ts`, `components/auth/auth-form.tsx`, `components/auth/otp-verification-form.tsx`, `components/auth/otp-verification-banner.tsx`, `app/api/auth/login/route.ts`, `app/api/auth/register/route.ts`, `app/api/auth/otp/request/route.ts`, `app/api/auth/otp/verify/route.ts`, `app/dashboard/page.tsx`, `app/settings/page.tsx`, `migrations/0004_otp_auth.sql`, `.env.example`, `SECURITY.md`, `files/ARCHITECTURE.md`, `files/DATABASE_NOTES.md`, `files/HANDOFF.md`, `files/TODO.md`.
+- Major decisions: keep password login/register as the default path, add Redis-only OTP challenges with HMAC-hashed identifiers/codes, and make email verification additive so current Playwright flows are not blocked. SMS stays a provider-shaped stub unless configured.
+- Security behavior: OTP challenges are stored only in Redis, codes are never stored plaintext, request/verify responses stay generic, and dev code logging is disabled unless `OTP_DEV_LOG_CODES=true`.
+- Manual verification planned: password login/register should continue to work unchanged; login should enter an OTP step only for `otp_required=true`; dashboard and settings should surface email verification without exposing secrets.
+- Commands run: `npm run typecheck`, `npm run lint`, `npm run build`, `PLAYWRIGHT_SKIP_WEBSERVER=1 PLAYWRIGHT_BASE_URL=http://127.0.0.1:3001 npm run test:e2e`.
+- Quality results: typecheck passed, lint passed, production build passed. Playwright could not complete in this sandbox because Chromium exited with `content/browser/sandbox_host_linux.cc:41 Check failed: . shutdown: Operation not permitted (1)` during browser launch, so e2e verification is environment-blocked rather than code-blocked.
+
 ## 2026-06-06T02:05:41+05:30 - Phase 1 Started
 
 - Files created: `PRODUCT.md`, `ARCHITECTURE.md`, `DESIGN.md`, `DATABASE_NOTES.md`, `SECURITY.md`, `DEPLOYMENT.md`, `TODO.md`, `BUILD_LOG.md`, `HANDOFF.md`.

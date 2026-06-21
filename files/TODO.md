@@ -27,6 +27,7 @@
 - [x] Favorite locations.
 - [x] AI Journal Enhancement.
 - [x] Progressive disclosure for dashboard and save-form optional panels.
+- [x] OTP validation foundation for password-first login/register, Redis-only challenges, and additive email verification.
 
 ## Secondary If Time Allows
 
@@ -35,6 +36,7 @@
 - [ ] Settings page.
 - [ ] Compare page.
 - [ ] Admin view.
+- [ ] Optional SMS provider implementation if phone OTP is ever promoted beyond the current stub.
 
 ## Future Journal Ideas
 

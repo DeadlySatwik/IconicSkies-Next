@@ -22,6 +22,7 @@ The schema intentionally uses PostgreSQL 18 features through raw SQL migrations 
 - Sky moment AI metadata lookup by user and captured time via nullable `title` and JSONB `mood_tags`.
 - Monthly recap generation is on demand and uses existing sky moments only; recap history is not stored in the database.
 - Current-location preview does not persist until the user explicitly saves it as a favorite.
+- User verification fields are durable database state, but OTP codes are not: `users.email_verified_at`, `users.phone_number`, `users.phone_verified_at`, and `users.otp_required` support email/phone verification while the actual OTP challenge remains Redis-only.
 
 ## Favorite Locations
 
@@ -32,6 +33,7 @@ The schema intentionally uses PostgreSQL 18 features through raw SQL migrations 
 - `sky_moments.title` and `sky_moments.mood_tags` are nullable additions for AI-assisted journal metadata. Older moments continue to work unchanged when the columns are null.
 - `mood_tags` is stored as `jsonb` string arrays so the app can persist optional tags without introducing a new table.
 - Redis is not a source of truth. Monthly recap, weather previews, and AI throttling use optional Upstash Redis caches only for derived or temporary state; the durable journal data still lives in PostgreSQL.
+- Redis-backed OTP validation follows the same rule: the code itself is ephemeral and never stored in PostgreSQL, only the verification status fields on `users` are durable.
 
 ## Local Commands
 

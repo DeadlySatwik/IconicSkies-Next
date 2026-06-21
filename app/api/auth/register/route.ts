@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { hashPassword } from "@/lib/auth/password";
+import { issueOtpChallenge } from "@/lib/auth/otp-service";
 import { createSession, setSessionCookie } from "@/lib/auth/session";
 import { getDb, isDatabaseConnectionError } from "@/lib/db/client";
 import { createFallbackUser, findFallbackUserByEmail } from "@/lib/dev/fallback-store";
@@ -39,8 +40,41 @@ export async function POST(request: Request) {
     const session = await createSession(user.id);
     await setSessionCookie(session.token, session.expiresAt);
 
+    void issueOtpChallenge({
+      channel: "email",
+      purpose: "verify-contact",
+      identifier: user.email,
+      subjectUserId: user.id,
+    })
+      .then((result) => {
+        if (result.ok) {
+          if (result.delivery.delivered) return;
+          if (process.env.NODE_ENV !== "production") {
+            console.warn("[auth/register] verification OTP could not be delivered", {
+              error: result.delivery.reason,
+            });
+          }
+          return;
+        }
+        if (process.env.NODE_ENV !== "production") {
+          console.warn("[auth/register] verification OTP could not be queued", {
+            error: result.reason,
+          });
+        }
+      })
+      .catch((error) => {
+        if (process.env.NODE_ENV !== "production") {
+          console.warn("[auth/register] verification OTP could not be queued", {
+            error: error instanceof Error ? error.message : "Unknown error",
+          });
+        }
+      });
+
     if (!isJson) return NextResponse.redirect(new URL("/dashboard", request.url), 303);
-    return NextResponse.json({ ok: true, user: { id: user.id, email: user.email, name: user.name } });
+    return NextResponse.json({
+      ok: true,
+      user: { id: user.id, email: user.email, name: user.name },
+    });
   } catch (error) {
     if (isDatabaseConnectionError(error)) {
       const email = normalizeEmail(parsed.data.email);
@@ -58,6 +92,27 @@ export async function POST(request: Request) {
 
       const session = await createSession(user.id);
       await setSessionCookie(session.token, session.expiresAt);
+
+      void issueOtpChallenge({
+        channel: "email",
+        purpose: "verify-contact",
+        identifier: user.email,
+        subjectUserId: user.id,
+      }).then((result) => {
+        if (result.ok) {
+          if (!result.delivery.delivered && process.env.NODE_ENV !== "production") {
+            console.warn("[auth/register] verification OTP could not be delivered", {
+              error: result.delivery.reason,
+            });
+          }
+          return;
+        }
+        if (process.env.NODE_ENV !== "production") {
+          console.warn("[auth/register] verification OTP could not be queued", {
+            error: result.reason,
+          });
+        }
+      });
 
       if (!isJson) return NextResponse.redirect(new URL("/dashboard", request.url), 303);
       return NextResponse.json({ ok: true, user: { id: user.id, email: user.email, name: user.name } });
