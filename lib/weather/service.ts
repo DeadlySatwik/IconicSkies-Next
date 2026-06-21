@@ -2,6 +2,8 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 import { and, desc, eq, gt } from "drizzle-orm";
+import { getJsonCache, setJsonCache } from "@/lib/cache/json-cache";
+import { weatherCityCacheKey, weatherCoordsCacheKey } from "@/lib/cache/keys";
 import { getDb, isDatabaseConnectionError } from "@/lib/db/client";
 import {
   findFallbackWeatherByCityKey,
@@ -40,6 +42,13 @@ type OpenWeatherPayload = {
 };
 
 const CACHE_MINUTES = 20;
+const CITY_CACHE_TTL_SECONDS = 15 * 60;
+const COORDS_CACHE_TTL_SECONDS = 10 * 60;
+
+function logWeatherCache(message: string, details: Record<string, unknown>) {
+  if (process.env.NODE_ENV === "production") return;
+  console.info(`[weather-cache] ${message}`, details);
+}
 
 function rawPayloadObject(value: unknown) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
@@ -76,6 +85,11 @@ function weatherMetadataFromRawPayload(value: unknown) {
   };
 }
 
+function roundCachedCoordinate(value: number | null | undefined) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  return Number(value.toFixed(3));
+}
+
 function unixSecondsToIso(value: number | undefined) {
   return typeof value === "number" && Number.isFinite(value)
     ? new Date(value * 1000).toISOString()
@@ -84,6 +98,82 @@ function unixSecondsToIso(value: number | undefined) {
 
 function normalizeCityName(city: string) {
   return city.trim().replace(/\s+/g, " ");
+}
+
+function weatherResultForCache(result: WeatherResult, roundCoordinates = false) {
+  return {
+    ...result,
+    city: {
+      ...result.city,
+      lat: roundCoordinates ? roundCachedCoordinate(result.city.lat) : result.city.lat,
+      lon: roundCoordinates ? roundCachedCoordinate(result.city.lon) : result.city.lon,
+    },
+  } satisfies WeatherResult;
+}
+
+async function getCachedWeatherByCity(cityName: string, units: WeatherUnits) {
+  const key = weatherCityCacheKey(cityName, null, units);
+  const cached = await getJsonCache<WeatherResult>(key).catch(() => null);
+  logWeatherCache(cached ? "hit" : "miss", {
+    type: "city",
+    key,
+    units,
+  });
+  return cached;
+}
+
+async function setCachedWeatherByCity(cityName: string, units: WeatherUnits, weather: WeatherResult) {
+  const cached = weatherResultForCache(weather);
+  const key = weatherCityCacheKey(cityName, null, units);
+  await setJsonCache(key, cached, CITY_CACHE_TTL_SECONDS);
+  logWeatherCache("store", {
+    type: "city",
+    key,
+    units,
+  });
+  if (cached.city.country) {
+    const countryKey = weatherCityCacheKey(cityName, cached.city.country, units);
+    await setJsonCache(countryKey, cached, CITY_CACHE_TTL_SECONDS);
+    logWeatherCache("store", {
+      type: "city-country",
+      key: countryKey,
+      units,
+    });
+  }
+}
+
+async function getCachedWeatherByCoordinates(latitude: number, longitude: number, units: WeatherUnits) {
+  const key = weatherCoordsCacheKey(latitude, longitude, units);
+  const cached = await getJsonCache<{ weather: WeatherResult; location: CurrentLocationResolution }>(key).catch(
+    () => null,
+  );
+  logWeatherCache(cached ? "hit" : "miss", {
+    type: "coords",
+    key,
+    units,
+  });
+  return cached;
+}
+
+async function setCachedWeatherByCoordinates(
+  latitude: number,
+  longitude: number,
+  units: WeatherUnits,
+  payload: { weather: WeatherResult; location: CurrentLocationResolution },
+) {
+  await setJsonCache(
+    weatherCoordsCacheKey(latitude, longitude, units),
+    {
+      weather: weatherResultForCache(payload.weather, true),
+      location: payload.location,
+    },
+    COORDS_CACHE_TTL_SECONDS,
+  );
+  logWeatherCache("store", {
+    type: "coords",
+    key: weatherCoordsCacheKey(latitude, longitude, units),
+    units,
+  });
 }
 
 function haversineDistanceKm(
@@ -511,6 +601,9 @@ async function persistSearch(query: string, units: WeatherUnits, userId: string 
 
 export async function getWeatherPreviewByCity(cityName: string, units: WeatherUnits) {
   const city = normalizeCityName(cityName);
+  const cached = await getCachedWeatherByCity(city, units).catch(() => null);
+  if (cached) return cached;
+
   const openWeather = await fetchOpenWeather(city, units).catch((error) => {
     if (process.env.OPENWEATHER_API_KEY) throw error;
     return null;
@@ -518,10 +611,13 @@ export async function getWeatherPreviewByCity(cityName: string, units: WeatherUn
 
   if (!openWeather) {
     const mock = weatherResultFromMock(city, units);
+    await setCachedWeatherByCity(city, units, mock).catch(() => undefined);
     return mock;
   }
 
-  return weatherResultFromOpenWeather(openWeather, units, city);
+  const result = weatherResultFromOpenWeather(openWeather, units, city);
+  await setCachedWeatherByCity(city, units, result).catch(() => undefined);
+  return result;
 }
 
 export async function getWeatherPreviewByCoordinatesWithLocation(
@@ -529,6 +625,9 @@ export async function getWeatherPreviewByCoordinatesWithLocation(
   longitude: number,
   units: WeatherUnits,
 ) {
+  const cached = await getCachedWeatherByCoordinates(latitude, longitude, units).catch(() => null);
+  if (cached) return cached;
+
   const openWeather = await fetchOpenWeatherByCoordinates(latitude, longitude, units).catch((error) => {
     if (process.env.OPENWEATHER_API_KEY) throw error;
     return null;
@@ -542,10 +641,12 @@ export async function getWeatherPreviewByCoordinatesWithLocation(
       country: null,
       region: null,
     }));
-    return {
+    const result = {
       weather: weatherResultFromMock(location.displayName, units, latitude, longitude),
       location,
     };
+    await setCachedWeatherByCoordinates(latitude, longitude, units, result).catch(() => undefined);
+    return result;
   }
 
   const location = await resolveCurrentLocationResolution(latitude, longitude, {
@@ -566,7 +667,7 @@ export async function getWeatherPreviewByCoordinatesWithLocation(
     location.displayName,
   );
 
-  return {
+  const result = {
     weather: {
       ...weather,
       city: {
@@ -578,6 +679,8 @@ export async function getWeatherPreviewByCoordinatesWithLocation(
     },
     location,
   };
+  await setCachedWeatherByCoordinates(latitude, longitude, units, result).catch(() => undefined);
+  return result;
 }
 
 export async function getWeatherPreviewByCoordinates(
@@ -594,6 +697,12 @@ export async function getWeatherForCity(
   userId: string | null = null,
 ): Promise<WeatherResult> {
   const city = normalizeCityName(cityName);
+  const redisCached = await getCachedWeatherByCity(city, units).catch(() => null);
+  if (redisCached && (!userId || redisCached.city.id)) {
+    if (userId) await persistSearch(city, units, userId, redisCached.city.id).catch(() => undefined);
+    return redisCached;
+  }
+
   let databaseUnavailable = false;
 
   const cached = await findCachedWeather(city, units).catch((error) => {
@@ -602,6 +711,7 @@ export async function getWeatherForCity(
     return null;
   });
   if (cached) {
+    await setCachedWeatherByCity(city, units, cached).catch(() => undefined);
     if (userId) await persistSearch(city, units, userId, cached.city.id).catch(() => undefined);
     return cached;
   }
@@ -615,6 +725,7 @@ export async function getWeatherForCity(
         forecast: [],
         isMock: fallbackCached.snapshot.source === "mock",
       } satisfies WeatherResult;
+      await setCachedWeatherByCity(city, units, result).catch(() => undefined);
       if (userId) await persistSearch(city, units, userId, fallbackCached.city.id).catch(() => undefined);
       return result;
     }
@@ -633,6 +744,7 @@ export async function getWeatherForCity(
           return fallbackWeatherToResult(preview);
         });
 
+    await setCachedWeatherByCity(city, units, persisted).catch(() => undefined);
     if (userId && !databaseUnavailable) {
       await persistSearch(city, units, userId, persisted.city.id).catch(() => undefined);
     }
@@ -648,6 +760,7 @@ export async function getWeatherForCity(
         return fallbackWeatherToResult(result);
       });
 
+  await setCachedWeatherByCity(city, units, persisted).catch(() => undefined);
   if (userId && !databaseUnavailable) {
     await persistSearch(city, units, userId, persisted.city.id).catch(() => undefined);
   }

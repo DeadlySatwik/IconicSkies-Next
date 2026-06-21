@@ -17,26 +17,14 @@ import {
   normalizeJournalInsightTitle,
   normalizeMoodTags,
 } from "@/lib/ai/journal-insights";
+import { checkOptionalRateLimit } from "@/lib/cache/rate-limit";
 import { journalEnhancementStyles } from "@/lib/ai/journal-styles";
 import { jsonError } from "@/lib/security/validation";
 import { formatTemperature } from "@/lib/utils";
 
-const requestWindowMs = 60_000;
-const requestLimit = 6;
-const requestLog = new Map<string, number[]>();
-
 const journalInsightsRequestSchema = journalInsightRequestSchema.extend({
   style: z.enum(journalEnhancementStyles).optional(),
 });
-
-function assertLightRateLimit(userId: string) {
-  const now = Date.now();
-  const recent = (requestLog.get(userId) ?? []).filter((timestamp) => now - timestamp < requestWindowMs);
-  if (recent.length >= requestLimit) return false;
-  recent.push(now);
-  requestLog.set(userId, recent);
-  return true;
-}
 
 function configuredModels() {
   const primary = process.env.GROQ_MODEL?.trim() || defaultGroqModel;
@@ -61,7 +49,13 @@ export async function POST(request: Request) {
     return jsonError("AI enhancement is not configured yet.", 503);
   }
 
-  if (!assertLightRateLimit(user.id)) {
+  const rateLimit = await checkOptionalRateLimit({
+    scope: "ai:journal-insights",
+    identifier: user.id,
+    limit: 10,
+    duration: "10 m",
+  });
+  if (!rateLimit.allowed) {
     return Response.json({ error: "AI is busy right now. Try again in a moment." }, { status: 429 });
   }
 

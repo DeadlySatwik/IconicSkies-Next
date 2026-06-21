@@ -135,13 +135,14 @@ export async function listSkyMoments(userId: string) {
     const rows = await getDb()
       .select({
         id: skyMoments.id,
-        note: skyMoments.note,
-        title: skyMoments.title,
-        moodTags: skyMoments.moodTags,
-        capturedAt: skyMoments.capturedAt,
-        photoId: skyMoments.photoId,
-        cityName: cities.name,
-        country: cities.country,
+      note: skyMoments.note,
+      title: skyMoments.title,
+      moodTags: skyMoments.moodTags,
+      capturedAt: skyMoments.capturedAt,
+      updatedAt: skyMoments.updatedAt,
+      photoId: skyMoments.photoId,
+      cityName: cities.name,
+      country: cities.country,
         temperature: weatherSnapshots.temperature,
         units: weatherSnapshots.units,
         condition: weatherSnapshots.condition,
@@ -170,6 +171,7 @@ export async function listSkyMoments(userId: string) {
         moodTags: Array.isArray(row.moodTags)
           ? row.moodTags.filter((tag): tag is string => typeof tag === "string")
           : null,
+        updatedAt: row.updatedAt,
       };
     });
   } catch (error) {

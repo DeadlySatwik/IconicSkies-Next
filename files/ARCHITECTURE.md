@@ -47,12 +47,15 @@ Legacy `favorite_cities` remains untouched. `favorite_locations` is the source o
 AI journal enhancement is server-only. The browser receives only the polished note result, never `GROQ_API_KEY` or raw provider credentials. The route uses the user note plus weather context, and it avoids sending private photo URLs or user identity details beyond what the prompt needs. The Groq model defaults to `llama-3.3-70b-versatile`, with `GROQ_MODEL` available as an override.
 AI journal insights and monthly recap reuse the same Groq transport and stay server-only. Title/tag suggestions are optional, monthly recap is on-demand only, and neither flow stores recap drafts in the database.
 The dashboard and save form share a reusable client-side collapsible section primitive so optional UI can stay compact without hiding stateful content or triggering network work on open. Monthly journal archive grouping is computed server-side from captured timestamps, then rendered into collapsible month sections with the current month opened first.
+Redis/Upstash is an optional, fail-open cache and throttling layer for derived data only. Monthly recap cache entries are versioned by user/month/journal version, weather cache entries are short-lived and keyed by city or rounded coordinates, and AI rate limiting is enforced server-side when Redis is available but skipped cleanly when it is not.
 
 ## Environment
 
 - `GROQ_API_KEY`: enables the optional journal note enhancement flow. When missing, the UI disables the action gracefully and the route returns a configuration error.
 - `GROQ_MODEL`: optional Groq model override for the journal enhancer. Defaults to `llama-3.3-70b-versatile`.
 - `GROQ_FALLBACK_MODEL`: optional fallback model used only when the primary Groq model fails before returning a usable response.
+- `UPSTASH_REDIS_REST_URL`: optional Upstash Redis REST URL for derived-data caching and AI rate limiting.
+- `UPSTASH_REDIS_REST_TOKEN`: optional Upstash Redis REST token for derived-data caching and AI rate limiting.
 - `PLAYWRIGHT_SKIP_WEBSERVER`: optional test-only flag that skips Playwright's web-server bootstrap when a local dev server is already running.
 
 ## Deployment

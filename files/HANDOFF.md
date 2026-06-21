@@ -141,22 +141,23 @@ Update on 2026-06-18: favorite locations are now implemented. Signed-in users ca
 - Latest verification on 2026-06-21: `npm run typecheck`, `npm run lint`, `npm run build`, and escalated `npm run test:e2e` passed. Playwright reported 7 passed and 1 skipped because the landing video toggle is desktop-only on the mobile project.
 - Update on 2026-06-21: dashboard and save-form optional surfaces now use a reusable collapsible section primitive, with month-grouped timeline archives and compact headers that preserve state when closed.
 - Latest verification on 2026-06-21: `npm run typecheck`, `npm run lint`, `npm run build`, and `PLAYWRIGHT_SKIP_WEBSERVER=1 PLAYWRIGHT_BASE_URL=http://localhost:3000 npm run test:e2e` passed. Playwright reported 7 passed and 1 skipped because the landing video toggle is desktop-only on the mobile project.
+- Update on 2026-06-21: Redis caching and rate limiting are now in place. Monthly recap caches by user/month/journal version, weather previews cache by city and rounded coordinates, and AI routes use optional Redis-backed throttles that fail open when env vars are missing.
+- Latest verification on 2026-06-21: `npm run typecheck`, `npm run lint`, `npm run build`, and `PLAYWRIGHT_SKIP_WEBSERVER=1 PLAYWRIGHT_BASE_URL=http://localhost:3000 npm run test:e2e` passed. Playwright reported 7 passed and 1 skipped because the landing video toggle is desktop-only on the mobile project.
 
 ## Exact Next Steps
 
 1. Run `npm run dev` and open `http://localhost:3000`.
 2. Use demo login `demo@iconicskies.local` / `IconicSkiesDemo123!`.
-3. For production, configure real `DATABASE_URL`, `OPENWEATHER_API_KEY`, GCS values, `AUTH_SECRET`, and Sentry DSNs.
-4. Add production rate limiting and dependency audit follow-up.
-5. Configure GCS bucket CORS for direct browser uploads if it is not already set.
-6. If original filenames should appear in the UI later, add an explicit migration for `sky_photos.original_filename`.
-7. Add focused unit coverage for weather mood resolution edge cases if the resolver grows more complex.
-8. Consider unit tests for favorite-location identity matching and current-location privacy behavior if the slice is extended further.
-9. Rewrite an older saved note from the dashboard edit flow only if the UX stays compact and user-approved.
-10. Set `GROQ_API_KEY` in production if AI note enhancement and journal insights should be available to signed-in users.
-11. Manually verify `Suggest with AI` and `Generate monthly recap` against the live Groq key in localhost to confirm provider content quality, not just route/build correctness.
-12. Add focused unit tests for the month summary helpers, Groq JSON content parsing, and insight quality guards if the slice expands.
-13. If the dashboard grows more sections, consider reusing `components/ui/collapsible-section.tsx` for any new optional panels so the disclosure pattern stays consistent.
+3. For production, configure real `DATABASE_URL`, `OPENWEATHER_API_KEY`, GCS values, `AUTH_SECRET`, Sentry DSNs, and optional Upstash Redis vars if caching/rate limiting should be enabled.
+4. Configure GCS bucket CORS for direct browser uploads if it is not already set.
+5. If original filenames should appear in the UI later, add an explicit migration for `sky_photos.original_filename`.
+6. Add focused unit coverage for weather mood resolution edge cases if the resolver grows more complex.
+7. Consider unit tests for favorite-location identity matching and current-location privacy behavior if the slice is extended further.
+8. Rewrite an older saved note from the dashboard edit flow only if the UX stays compact and user-approved.
+9. Manually verify `Suggest with AI`, `Generate monthly recap`, weather caching, and Redis rate limiting against live credentials in localhost to confirm provider content quality and cache hits, not just route/build correctness.
+10. Add focused unit tests for the month summary helpers, Groq JSON content parsing, and insight quality guards if the slice expands.
+11. If the dashboard grows more sections, consider reusing `components/ui/collapsible-section.tsx` for any new optional panels so the disclosure pattern stays consistent.
+12. Keep Redis optional in local development; the app should still function normally when the Upstash env vars are absent.
 
 ## Resume Prompt
 

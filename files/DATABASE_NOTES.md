@@ -31,6 +31,7 @@ The schema intentionally uses PostgreSQL 18 features through raw SQL migrations 
 - `favorite_cities` is intentionally left legacy-only and unchanged.
 - `sky_moments.title` and `sky_moments.mood_tags` are nullable additions for AI-assisted journal metadata. Older moments continue to work unchanged when the columns are null.
 - `mood_tags` is stored as `jsonb` string arrays so the app can persist optional tags without introducing a new table.
+- Redis is not a source of truth. Monthly recap, weather previews, and AI throttling use optional Upstash Redis caches only for derived or temporary state; the durable journal data still lives in PostgreSQL.
 
 ## Local Commands
 

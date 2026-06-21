@@ -1,5 +1,10 @@
 import { getCurrentUser } from "@/lib/auth/session";
-import { buildMonthlyRecapPrompt, buildMonthlyRecapSystemInstruction, monthlyRecapRequestSchema, monthlyRecapResponseSchema } from "@/lib/ai/monthly-recap";
+import {
+  buildMonthlyRecapPrompt,
+  buildMonthlyRecapSystemInstruction,
+  monthlyRecapRequestSchema,
+  monthlyRecapResponseSchema,
+} from "@/lib/ai/monthly-recap";
 import {
   defaultGroqModel,
   requestGroqChatCompletion,
@@ -7,22 +12,34 @@ import {
   sanitizeModelContentPreview,
   sanitizeProviderMessage,
 } from "@/lib/ai/groq";
+import { getJsonCache, setJsonCache } from "@/lib/cache/json-cache";
+import { monthlyRecapCacheKey } from "@/lib/cache/keys";
+import { isRedisConfigured } from "@/lib/cache/redis";
+import { checkOptionalRateLimit } from "@/lib/cache/rate-limit";
 import { favoriteLabelForMoment, listFavoriteLocations } from "@/lib/favorites/service";
 import { jsonError } from "@/lib/security/validation";
-import { filterMomentsForMonth, getMonthKey, summarizeMonthlyMoments } from "@/lib/sky/monthly-recap";
+import {
+  buildMonthlyRecapRequestMoments,
+  filterMomentsForMonth,
+  getMonthKey,
+  summarizeMonthlyMoments,
+} from "@/lib/sky/monthly-recap";
+import { buildMonthlyRecapJournalVersion } from "@/lib/sky/monthly-recap-version";
 import { listSkyMoments } from "@/lib/sky/service";
 
-const requestWindowMs = 60_000;
-const requestLimit = 4;
-const requestLog = new Map<string, number[]>();
+type MonthlyRecapPayload = {
+  headline: string;
+  recap: string;
+  highlights: string[];
+  dominantMoods: string[];
+  source?: "cache" | "generated";
+};
 
-function assertLightRateLimit(userId: string) {
-  const now = Date.now();
-  const recent = (requestLog.get(userId) ?? []).filter((timestamp) => now - timestamp < requestWindowMs);
-  if (recent.length >= requestLimit) return false;
-  recent.push(now);
-  requestLog.set(userId, recent);
-  return true;
+const MONTHLY_RECAP_CACHE_TTL_SECONDS = 60 * 60 * 24 * 30;
+
+function logMonthlyRecap(message: string, details: Record<string, unknown> = {}) {
+  if (process.env.NODE_ENV === "production") return;
+  console.info(`[ai/monthly-recap] ${message}`, details);
 }
 
 function configuredModels() {
@@ -59,58 +76,85 @@ export async function POST(request: Request) {
     return jsonError("AI enhancement is not configured yet.", 503);
   }
 
-  if (!assertLightRateLimit(user.id)) {
-    return Response.json({ error: "AI is busy right now. Try again in a moment." }, { status: 429 });
-  }
-
   const parsed = monthlyRecapRequestSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return jsonError("Check the monthly recap details.", 422);
 
   const monthKey = parsed.data.month ?? getMonthKey();
-  const [moments, favorites] = await Promise.all([
-    listSkyMoments(user.id).catch(() => []),
-    listFavoriteLocations(user.id).catch(() => []),
-  ]);
-
-  const monthMoments = filterMomentsForMonth(moments, monthKey).slice(0, 20).map((moment) => ({
-    city: moment.country ? `${moment.cityName}, ${moment.country}` : moment.cityName,
-    condition: moment.condition,
-    temperature: `${moment.temperature.toFixed(1)} ${moment.units === "imperial" ? "°F" : "°C"}`,
-    capturedAt: moment.capturedAt instanceof Date ? moment.capturedAt.toISOString() : moment.capturedAt,
-    title: moment.title?.trim() || null,
-    moodTags: Array.isArray(moment.moodTags) ? moment.moodTags.slice(0, 5) : [],
-    noteExcerpt: moment.note?.trim()
-      ? moment.note.trim().replace(/\s+/g, " ").slice(0, 160)
-      : null,
-    hasPhoto: Boolean(moment.photoId),
-    favoriteLabel: favoriteLabelForMoment(moment, favorites) ?? null,
-  }));
+  const moments = await listSkyMoments(user.id).catch(() => []);
+  const monthMoments = filterMomentsForMonth(moments, monthKey);
+  const redisConfigured = isRedisConfigured();
 
   if (monthMoments.length === 0) {
     return jsonError("No saved sky moments for that month.", 404);
   }
 
-  const summary = summarizeMonthlyMoments(
-    monthMoments.map((moment) => ({
-      id: moment.capturedAt,
-      cityName: moment.city,
-      country: null,
-      condition: moment.condition,
-      temperature: Number.parseFloat(moment.temperature),
-      units: moment.temperature.endsWith("°F") ? "imperial" : "metric",
-      note: moment.noteExcerpt,
-      title: moment.title,
-      moodTags: moment.moodTags,
-      capturedAt: moment.capturedAt,
-      photoId: moment.hasPhoto ? "photo" : null,
-      favoriteLabel: moment.favoriteLabel,
-    })),
+  const journalVersion = buildMonthlyRecapJournalVersion(monthMoments);
+  const cacheKey = monthlyRecapCacheKey(user.id, monthKey, journalVersion);
+  logMonthlyRecap("redis status", {
+    redisConfigured,
     monthKey,
-  );
+    journalVersion,
+    cacheKey,
+    momentCount: monthMoments.length,
+  });
+  const cached = await getJsonCache<MonthlyRecapPayload>(cacheKey).catch(() => null);
+
+  if (cached) {
+    logMonthlyRecap("cache hit", {
+      redisConfigured,
+      monthKey,
+      journalVersion,
+      cacheKey,
+      momentCount: monthMoments.length,
+    });
+    return Response.json({ ...cached, source: "cache" as const });
+  }
+
+  logMonthlyRecap("cache miss", {
+    redisConfigured,
+    monthKey,
+    journalVersion,
+    cacheKey,
+    momentCount: monthMoments.length,
+  });
+
+  const rateLimit = await checkOptionalRateLimit({
+    scope: "ai:monthly-recap",
+    identifier: user.id,
+    limit: 3,
+    duration: "1 h",
+  });
+  if (!rateLimit.allowed) {
+    logMonthlyRecap("rate limited", {
+      redisConfigured,
+      monthKey,
+      journalVersion,
+      cacheKey,
+      momentCount: monthMoments.length,
+    });
+    return Response.json(
+      {
+        error: "You’ve used a lot of recap requests recently. Try again later.",
+        code: "RATE_LIMITED",
+      },
+      { status: 429 },
+    );
+  }
+
+  const favorites = await listFavoriteLocations(user.id).catch(() => []);
+  const requestMoments = buildMonthlyRecapRequestMoments(monthMoments, monthKey).map((moment, index) => {
+    const sourceMoment = monthMoments[index];
+    return {
+      ...moment,
+      favoriteLabel: favoriteLabelForMoment(sourceMoment, favorites) ?? moment.favoriteLabel ?? null,
+    };
+  });
+
+  const summary = summarizeMonthlyMoments(monthMoments, monthKey);
 
   const prompt = buildMonthlyRecapPrompt({
     monthLabel: summary.monthLabel,
-    moments: monthMoments,
+    moments: requestMoments,
   });
   const systemInstruction = buildMonthlyRecapSystemInstruction();
   const models = configuredModels();
@@ -187,7 +231,30 @@ export async function POST(request: Request) {
         }
       }
 
-      return Response.json(validated.data);
+      const payload: MonthlyRecapPayload = {
+        ...validated.data,
+      };
+      const stored = await setJsonCache(cacheKey, payload, MONTHLY_RECAP_CACHE_TTL_SECONDS).catch(() => false);
+      if (process.env.NODE_ENV === "development") {
+        const readBack = await getJsonCache<MonthlyRecapPayload>(cacheKey).catch(() => null);
+        console.info("[ai/monthly-recap] cache write verification", {
+          monthKey,
+          journalVersion,
+          cacheKey,
+          stored,
+          readBack: Boolean(readBack),
+        });
+      }
+      logMonthlyRecap("generated and cached", {
+        redisConfigured,
+        monthKey,
+        journalVersion,
+        cacheKey,
+        momentCount: monthMoments.length,
+        model,
+        cacheSetSuccess: stored,
+      });
+      return Response.json({ ...payload, source: "generated" as const });
     }
 
     return Response.json({ error: "AI provider failed. Please try again later." }, { status: 502 });

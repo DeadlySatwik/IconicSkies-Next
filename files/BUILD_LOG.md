@@ -183,3 +183,12 @@
 - Test behavior: the Playwright config now supports `PLAYWRIGHT_SKIP_WEBSERVER=1` for environments where an already-running localhost dev server should be reused.
 - Commands run: `npm run typecheck`, `npm run lint`, `npm run build`, `PLAYWRIGHT_SKIP_WEBSERVER=1 PLAYWRIGHT_BASE_URL=http://localhost:3000 npm run test:e2e`.
 - Quality results: typecheck passed, lint passed, production build passed, and Playwright passed 7/8 with the desktop-only landing video check skipped on the mobile project.
+
+## 2026-06-21 - Redis Cache and Rate-Limit Foundation
+
+- Files created: `lib/cache/redis.ts`, `lib/cache/keys.ts`, `lib/cache/json-cache.ts`, `lib/cache/rate-limit.ts`.
+- Files modified: `lib/weather/service.ts`, `lib/sky/service.ts`, `lib/sky/monthly-recap.ts`, `app/api/ai/journal-enhance/route.ts`, `app/api/ai/journal-insights/route.ts`, `app/api/ai/monthly-recap/route.ts`, `.env.example`, `files/ARCHITECTURE.md`, `files/DATABASE_NOTES.md`, `files/HANDOFF.md`.
+- Major decisions: use optional Upstash Redis as a fail-open layer for derived data only; cache monthly recap by user/month/journal version; cache weather previews by city or rounded coordinates; replace route-local in-memory throttles with shared Upstash Ratelimit helpers.
+- Privacy behavior: Redis keys avoid raw emails, auth tokens, and exact GPS precision; cached coordinate previews are rounded before storage.
+- Verification: `npm run typecheck`, `npm run lint`, `npm run build`, and `PLAYWRIGHT_SKIP_WEBSERVER=1 PLAYWRIGHT_BASE_URL=http://localhost:3000 npm run test:e2e`.
+- Quality results: typecheck passed, lint passed, production build passed, and Playwright passed 7/8 with the desktop-only landing video toggle skipped on the mobile project.

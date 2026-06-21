@@ -11,6 +11,7 @@ export type MonthlyRecapMoment = {
   title?: string | null;
   moodTags?: string[] | null;
   capturedAt: Date | string;
+  updatedAt?: Date | string;
   photoId?: string | null;
   favoriteLabel?: string | null;
 };

@@ -22,6 +22,8 @@
 - [ ] Add unit tests around auth, weather normalization, and upload validation.
 - [ ] Add dependency-audit follow-up for npm moderate transitive findings.
 - [ ] Add focused unit tests for weather background mood resolution edge cases.
+- [x] Redis caching foundation for monthly recap and weather previews.
+- [x] AI rate limiting via optional Redis-backed helpers.
 - [x] Favorite locations.
 - [x] AI Journal Enhancement.
 - [x] Progressive disclosure for dashboard and save-form optional panels.

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Copy, LoaderCircle, Sparkles } from "lucide-react";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import type { MonthlyRecapSummary } from "@/lib/sky/monthly-recap";
@@ -12,7 +12,9 @@ type RecapResponse = {
   recap?: string;
   highlights?: string[];
   dominantMoods?: string[];
+  source?: "cache" | "generated";
   error?: string;
+  code?: string;
 };
 
 export function MonthlySkyRecap({
@@ -26,17 +28,22 @@ export function MonthlySkyRecap({
   const [highlights, setHighlights] = useState<string[]>([]);
   const [dominantMoods, setDominantMoods] = useState<string[]>([]);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [open, setOpen] = useState(false);
+  const [source, setSource] = useState<"cache" | "generated" | null>(null);
+  const requestInFlightRef = useRef(false);
   const prevMonthKey = shiftMonthKey(summary.monthKey, -1);
   const nextMonthKey = shiftMonthKey(summary.monthKey, 1);
   const hasMoments = summary.momentCount > 0;
 
   async function generateRecap() {
-    if (!hasMoments || status === "loading") return;
+    if (!hasMoments || status === "loading" || requestInFlightRef.current) return;
 
+    requestInFlightRef.current = true;
     setOpen(true);
     setStatus("loading");
     setError("");
+    setNotice("");
 
     try {
       const response = await fetch("/api/ai/monthly-recap", {
@@ -47,8 +54,22 @@ export function MonthlySkyRecap({
 
       const payload = (await response.json().catch(() => null)) as RecapResponse | null;
       if (!response.ok || !payload?.headline || !payload?.recap) {
-        setStatus("error");
-        setError(response.status === 429 && payload?.error ? payload.error : "Could not generate this recap right now.");
+        const cachedVisible = Boolean(headline && recap);
+        if (cachedVisible) {
+          setStatus("ready");
+          setNotice(
+            response.status === 429
+              ? "You’ve used a lot of recap requests recently. Try again later."
+              : "Keeping your latest recap visible.",
+          );
+        } else {
+          setStatus("error");
+          setError(
+            response.status === 429 && payload?.error
+              ? payload.error
+              : "Could not generate this recap right now.",
+          );
+        }
         return;
       }
 
@@ -57,9 +78,23 @@ export function MonthlySkyRecap({
       setHighlights((payload.highlights ?? []).slice(0, 5));
       setDominantMoods((payload.dominantMoods ?? []).slice(0, 5));
       setStatus("ready");
+      setSource(payload.source ?? "generated");
+      setNotice(
+        payload.source === "cache"
+          ? "You’re viewing the latest recap for this month."
+          : "Recap updated from your latest journals.",
+      );
     } catch {
-      setStatus("error");
-      setError("Could not generate this recap right now.");
+      const cachedVisible = Boolean(headline && recap);
+      if (cachedVisible) {
+        setStatus("ready");
+        setNotice("Keeping your latest recap visible.");
+      } else {
+        setStatus("error");
+        setError("Could not generate this recap right now.");
+      }
+    } finally {
+      requestInFlightRef.current = false;
     }
   }
 
@@ -72,6 +107,7 @@ export function MonthlySkyRecap({
   const headerSummary = status === "ready" && headline
     ? `Recap ready for ${summary.monthLabel}`
     : `Generate a recap for ${summary.monthLabel}`;
+  const statusMessage = notice || error;
 
   return (
     <CollapsibleSection
@@ -187,7 +223,14 @@ export function MonthlySkyRecap({
                 <div className="mt-4 space-y-4 rounded-xl border border-white/12 bg-[#071417]/80 p-4">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-aurora">Monthly recap</p>
-                    <h3 className="mt-2 text-xl font-semibold text-cloud">{headline}</h3>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <h3 className="text-xl font-semibold text-cloud">{headline}</h3>
+                      {source ? (
+                        <span className="rounded-full border border-white/12 bg-white/8 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-cloud/72">
+                          {source === "cache" ? "Latest loaded" : "Updated"}
+                        </span>
+                      ) : null}
+                    </div>
                     <p className="mt-3 text-sm leading-7 text-cloud/82">{recap}</p>
                   </div>
                   {highlights.length > 0 ? (
@@ -232,7 +275,11 @@ export function MonthlySkyRecap({
                 </div>
               )}
 
-              {error ? <p className="mt-3 text-sm font-medium text-danger">{error}</p> : null}
+              {statusMessage ? (
+                <p className={`mt-3 text-sm font-medium ${error ? "text-danger" : "text-cloud/72"}`}>
+                  {statusMessage}
+                </p>
+              ) : null}
             </div>
           )}
         </div>

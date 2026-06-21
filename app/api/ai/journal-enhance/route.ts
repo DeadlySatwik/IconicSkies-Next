@@ -8,6 +8,7 @@ import {
   journalEnhancementStyleSchema,
   normalizeEnhancedJournalNote,
 } from "@/lib/ai/journal-enhancer";
+import { checkOptionalRateLimit } from "@/lib/cache/rate-limit";
 import { formatTemperature } from "@/lib/utils";
 
 const groqEndpoint = "https://api.groq.com/openai/v1/chat/completions";
@@ -27,10 +28,6 @@ const journalEnhanceSchema = z.object({
   hasPhoto: z.boolean().optional().default(false),
 });
 
-const requestWindowMs = 60_000;
-const requestLimit = 6;
-const requestLog = new Map<string, number[]>();
-
 type GroqPayload = {
   choices?: Array<{
     message?: {
@@ -38,18 +35,6 @@ type GroqPayload = {
     };
   }>;
 };
-
-function assertLightRateLimit(userId: string) {
-  const now = Date.now();
-  const recent = (requestLog.get(userId) ?? []).filter((timestamp) => now - timestamp < requestWindowMs);
-  if (recent.length >= requestLimit) {
-    return false;
-  }
-
-  recent.push(now);
-  requestLog.set(userId, recent);
-  return true;
-}
 
 function sanitizeProviderMessage(message: string) {
   const compact = message.replace(/\s+/g, " ").trim();
@@ -129,7 +114,13 @@ export async function POST(request: Request) {
     return jsonError("AI enhancement is not configured yet.", 503);
   }
 
-  if (!assertLightRateLimit(user.id)) {
+  const rateLimit = await checkOptionalRateLimit({
+    scope: "ai:journal-enhance",
+    identifier: user.id,
+    limit: 10,
+    duration: "10 m",
+  });
+  if (!rateLimit.allowed) {
     return Response.json({ error: "AI is busy right now. Try again in a moment." }, { status: 429 });
   }
 
