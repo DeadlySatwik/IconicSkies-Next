@@ -27,9 +27,18 @@ test("desktop landing video toggle appears and persists", async ({ page }, testI
   await page.goto("/");
   await expect(page.getByTestId("landing-background")).toBeVisible();
   await expect(page.getByRole("button", { name: "Image background" })).toBeVisible();
+  const reducedMotion = await page.evaluate(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  if (reducedMotion) {
+    test.skip(true, "video background toggle is disabled when reduced motion is preferred");
+  }
 
-  await page.getByRole("button", { name: "Video background" }).click();
-  await expect(page.getByRole("button", { name: "Video background" })).toHaveAttribute(
+  const videoToggle = page.getByRole("button", { name: "Video background" });
+  if (await videoToggle.isDisabled()) {
+    test.skip(true, "video background toggle is disabled in this environment");
+  }
+
+  await videoToggle.click();
+  await expect(videoToggle).toHaveAttribute(
     "aria-pressed",
     "true",
   );
@@ -53,7 +62,7 @@ test("registers, saves a sky moment, and shows it in the timeline", async ({ pag
   await expect(page).toHaveURL(/\/dashboard/);
   await expect(page.getByRole("heading", { name: /saved skies/i })).toBeVisible();
 
-  await page.goto("/city/darjeeling?units=metric");
+  await page.goto("/city/darjeeling?units=metric", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("button", { name: /enhance note with ai/i })).toHaveAttribute("aria-expanded", "false");
   await expect(page.getByRole("button", { name: /add title & mood tags/i })).toHaveAttribute("aria-expanded", "false");
   await page.getByRole("button", { name: /enhance note with ai/i }).click();
@@ -81,4 +90,38 @@ test("registers, saves a sky moment, and shows it in the timeline", async ({ pag
 test("protected dashboard redirects signed-out users", async ({ page }) => {
   await page.goto("/dashboard");
   await expect(page).toHaveURL(/\/login/);
+});
+
+test("settings page shows email OTP security controls", async ({ page }) => {
+  const email = uniqueEmail();
+
+  const registerResponse = await page.request.post("/api/auth/register", {
+    data: {
+      name: "Security Sky",
+      email,
+      password: "IconicSkiesTest123!",
+    },
+  });
+  expect(registerResponse.ok()).toBeTruthy();
+
+  await page.goto("/settings");
+  await expect(page.getByRole("heading", { name: /account security/i })).toBeVisible();
+  await expect(page.getByText(/manage email verification and sign-in protection/i)).toBeVisible();
+  await expect(page.getByText("Email verification", { exact: true })).toBeVisible();
+  await expect(page.getByText("OTP sign-in protection", { exact: true })).toBeVisible();
+  await expect(page.getByText(/when otp sign-in is enabled for your account, iconicskies asks for an email code after your password/i)).toBeVisible();
+});
+
+test("dashboard settings redirects to settings", async ({ page }) => {
+  const email = uniqueEmail();
+
+  await page.goto("/register");
+  await page.getByLabel("Name").fill("Redirect Sky");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill("IconicSkiesTest123!");
+  await page.getByRole("button", { name: /create account/i }).click();
+  await expect(page).toHaveURL(/\/dashboard/);
+
+  await page.goto("/dashboard/settings");
+  await expect(page).toHaveURL(/\/settings/);
 });

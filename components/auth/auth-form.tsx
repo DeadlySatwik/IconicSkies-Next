@@ -82,7 +82,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
 
   if (mode === "login" && otpRequired) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 text-cloud">
         <OtpVerificationForm
           purpose="login"
           channel="email"
@@ -91,9 +91,10 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
           description={otpMessage || "We sent a code to your email to finish signing in."}
           initialMessage={otpMessage}
           onVerified={handleOtpVerified}
+          tone="dark"
         />
         <button
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-skyInk/15 px-5 font-semibold text-skyInk transition hover:bg-mist focus:outline-none focus:ring-2 focus:ring-rain"
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-white/14 bg-white/6 px-5 font-semibold text-cloud transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-aurora/30"
           type="button"
           onClick={() => {
             setOtpRequired(false);
@@ -109,60 +110,63 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
   }
 
   return (
-    <form className="space-y-4" onSubmit={onSubmit} action={`/api/auth/${mode}`} method="post">
+    <form className="space-y-4 text-cloud" onSubmit={onSubmit} action={`/api/auth/${mode}`} method="post">
       {isRegister ? (
         <div>
-          <label className="text-sm font-semibold" htmlFor="name">
+          <label className="text-sm font-semibold text-cloud" htmlFor="name">
             Name
           </label>
           <input
-            className="mt-2 min-h-11 w-full rounded-lg border border-skyInk/15 px-4 focus:border-rain focus:ring-2 focus:ring-rain/25"
+            className="mt-2 min-h-11 w-full rounded-lg border border-white/14 bg-black/20 px-4 text-cloud placeholder:text-cloud/38 shadow-inner shadow-black/20 outline-none transition focus:border-aurora focus:ring-2 focus:ring-aurora/20"
             id="name"
             name="name"
             autoComplete="name"
+            placeholder="Your name"
             required
           />
         </div>
       ) : null}
       <div>
-        <label className="text-sm font-semibold" htmlFor="email">
+        <label className="text-sm font-semibold text-cloud" htmlFor="email">
           Email
         </label>
         <input
-          className="mt-2 min-h-11 w-full rounded-lg border border-skyInk/15 px-4 focus:border-rain focus:ring-2 focus:ring-rain/25"
+          className="mt-2 min-h-11 w-full rounded-lg border border-white/14 bg-black/20 px-4 text-cloud placeholder:text-cloud/38 shadow-inner shadow-black/20 outline-none transition focus:border-aurora focus:ring-2 focus:ring-aurora/20"
           id="email"
           name="email"
           type="email"
           autoComplete="email"
+          placeholder="you@example.com"
           required
         />
       </div>
       <div>
-        <label className="text-sm font-semibold" htmlFor="password">
+        <label className="text-sm font-semibold text-cloud" htmlFor="password">
           Password
         </label>
         <input
-          className="mt-2 min-h-11 w-full rounded-lg border border-skyInk/15 px-4 focus:border-rain focus:ring-2 focus:ring-rain/25"
+          className="mt-2 min-h-11 w-full rounded-lg border border-white/14 bg-black/20 px-4 text-cloud placeholder:text-cloud/38 shadow-inner shadow-black/20 outline-none transition focus:border-aurora focus:ring-2 focus:ring-aurora/20"
           id="password"
           name="password"
           type="password"
           autoComplete={isRegister ? "new-password" : "current-password"}
           minLength={isRegister ? 10 : 1}
+          placeholder={isRegister ? "At least 10 characters" : "Your password"}
           required
         />
       </div>
-      {error ? <p className="text-sm font-medium text-danger">{error}</p> : null}
+      {error ? <p className="text-sm font-medium text-rose-200">{error}</p> : null}
       <button
-        className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-skyInk px-5 font-semibold text-cloud hover:bg-night focus:outline-none focus:ring-2 focus:ring-rain disabled:opacity-70"
+        className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-cloud px-5 font-semibold text-skyInk transition hover:bg-mist focus:outline-none focus:ring-2 focus:ring-aurora disabled:opacity-70"
         type="submit"
         disabled={loading}
       >
         {loading ? <LoaderCircle aria-hidden className="size-4 animate-spin" /> : null}
         {isRegister ? "Create account" : "Sign in"}
       </button>
-      <p className="text-center text-sm text-skyInk/70">
-        {isRegister ? "Already have an account?" : "New to IconicSkies?"}{" "}
-        <Link className="font-semibold text-rain underline-offset-4 hover:underline" href={isRegister ? "/login" : "/register"}>
+      <p className="text-center text-sm text-cloud/70">
+        {isRegister ? "Already have an account?" : "New to IconicSkies?"} {" "}
+        <Link className="font-semibold text-aurora underline-offset-4 hover:underline" href={isRegister ? "/login" : "/register"}>
           {isRegister ? "Sign in" : "Create account"}
         </Link>
       </p>

@@ -10,6 +10,7 @@ export function OtpVerificationBanner({
   title,
   description,
   compact = false,
+  tone = "dark",
 }: {
   purpose: "register" | "login" | "verify-contact";
   channel: "email" | "sms";
@@ -17,6 +18,7 @@ export function OtpVerificationBanner({
   title: string;
   description?: string;
   compact?: boolean;
+  tone?: "dark" | "light";
 }) {
   const router = useRouter();
 
@@ -28,6 +30,7 @@ export function OtpVerificationBanner({
       title={title}
       description={description}
       compact={compact}
+      tone={tone}
       onVerified={() => {
         router.refresh();
       }}
