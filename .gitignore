@@ -91,3 +91,11 @@ assets-source/
 # Local env backups
 .env.local.backup
 .env*.backup
+
+# Ignore local project planning docs
+files/*.md
+
+# Keep public docs tracked
+!files/PRODUCT.md
+!files/SECURITY.md
+
