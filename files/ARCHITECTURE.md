@@ -49,6 +49,8 @@ AI journal insights and monthly recap reuse the same Groq transport and stay ser
 The dashboard and save form share a reusable client-side collapsible section primitive so optional UI can stay compact without hiding stateful content or triggering network work on open. Monthly journal archive grouping is computed server-side from captured timestamps, then rendered into collapsible month sections with the current month opened first.
 Redis/Upstash is an optional, fail-open cache and throttling layer for derived data only. Monthly recap cache entries are versioned by user/month/journal version, weather cache entries are short-lived and keyed by city or rounded coordinates, and AI rate limiting is enforced server-side when Redis is available but skipped cleanly when it is not.
 OTP validation is additive and password-first. Challenges live only in Redis, identifiers are hashed before they reach any Redis key, OTP codes are HMAC-hashed before storage, and the default login/register path stays unchanged unless a user is explicitly marked `otp_required`.
+Sky Moment creation accepts a server-validated `capturedAt` within the previous 14 days and an optional captured city. Changed cities are resolved again server-side; client coordinates are not treated as authoritative. Current moments retain the existing OpenWeather snapshot path, while backdated moments use Open-Meteo Historical Forecast data and persist the normalized snapshot before the journal row is created.
+Historical weather is cached for 30 days under an hourly key containing only coordinates rounded to three decimals, capture hour, and units. Redis remains optional and the provider is called directly when caching is unavailable.
 
 ## Environment
 

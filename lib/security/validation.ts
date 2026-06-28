@@ -41,6 +41,18 @@ export const skyMomentSchema = z.object({
   moodTags: z.array(z.string().trim().min(1).max(24)).max(5).optional().nullable(),
   note: z.string().trim().max(1200).optional().default(""),
   attachMockPhoto: z.boolean().optional().default(false),
+  units: unitsSchema.optional().nullable(),
+  capturedAt: z.string().trim().min(1).max(64).optional().nullable(),
+  capturedLocation: z
+    .object({
+      name: z.string().trim().min(1).max(160),
+      country: z.string().trim().max(80).optional().nullable(),
+      region: z.string().trim().max(120).optional().nullable(),
+      latitude: z.number().finite().min(-90).max(90).optional().nullable(),
+      longitude: z.number().finite().min(-180).max(180).optional().nullable(),
+    })
+    .optional()
+    .nullable(),
 });
 
 export const allowedUploadContentTypes = [

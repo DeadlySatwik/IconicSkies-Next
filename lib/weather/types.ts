@@ -1,4 +1,5 @@
 export type WeatherUnits = "metric" | "imperial";
+export type WeatherSource = "openweather" | "openmeteo" | "mock";
 
 export type ForecastPoint = {
   time: string;
@@ -18,7 +19,7 @@ export type WeatherResult = {
   };
   snapshot: {
     id: string;
-    source: "openweather" | "mock";
+    source: WeatherSource;
     units: WeatherUnits;
     temperature: number;
     feelsLike: number | null;

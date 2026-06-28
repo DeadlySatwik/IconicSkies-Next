@@ -34,6 +34,8 @@ The schema intentionally uses PostgreSQL 18 features through raw SQL migrations 
 - `mood_tags` is stored as `jsonb` string arrays so the app can persist optional tags without introducing a new table.
 - Redis is not a source of truth. Monthly recap, weather previews, and AI throttling use optional Upstash Redis caches only for derived or temporary state; the durable journal data still lives in PostgreSQL.
 - Redis-backed OTP validation follows the same rule: the code itself is ephemeral and never stored in PostgreSQL, only the verification status fields on `users` are durable.
+- No migration was needed for backdated Sky Moments. Existing `sky_moments.captured_at`, city, and weather snapshot relationships represent the selected time, location, and immutable historical weather snapshot.
+- The journal timeline remains indexed and ordered by `captured_at`; “latest saved” landing behavior uses the existing `created_at`.
 
 ## Local Commands
 

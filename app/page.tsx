@@ -1,15 +1,12 @@
-import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, BookOpen, Clock3, CloudSun, MapPin } from "lucide-react";
+import { ArrowRight, BookOpen, CloudSun, MapPin } from "lucide-react";
 import { LandingBackground } from "@/components/layout/landing-background";
 import { CurrentLocationEntry } from "@/components/layout/current-location-entry";
+import { LandingSkyMomentCard } from "@/components/sky/landing-sky-moment-card";
 import { SearchPanel } from "@/components/weather/search-panel";
 import { getCurrentUser } from "@/lib/auth/session";
 import { listSkyMoments } from "@/lib/sky/service";
-import { formatTemperature } from "@/lib/utils";
-import { getWeatherBackground } from "@/lib/weather/backgrounds";
-import { resolveWeatherBackgroundMood } from "@/lib/weather/resolve-weather-background";
-import type { WeatherResult } from "@/lib/weather/types";
+import { getSkyMomentBackground, overlayClassForWeatherOverlay } from "@/lib/sky/moment-visual";
 
 type LandingMoment = Awaited<ReturnType<typeof listSkyMoments>>[number] & {
   weatherId?: number | null;
@@ -17,12 +14,17 @@ type LandingMoment = Awaited<ReturnType<typeof listSkyMoments>>[number] & {
   timezoneOffset?: number | null;
   sunrise?: string | null;
   sunset?: string | null;
+  createdAt: Date;
 };
 
 export default async function HomePage() {
   const user = await getCurrentUser().catch(() => null);
   const moments = user ? await listSkyMoments(user.id).catch(() => []) : [];
-  const latestMoment = moments[0] ?? null;
+  const latestMoment = [...moments].sort((a, b) => {
+    const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
+    const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
+    return bTime - aTime;
+  })[0] ?? null;
 
   return (
     <main className="bg-[#050c12] text-cloud">
@@ -60,7 +62,7 @@ export default async function HomePage() {
               </span>
             </div>
           </div>
-          <div className="relative lg:ml-auto lg:mt-8 lg:max-w-[29.5rem]">
+          <div className="relative lg:ml-auto lg:mt-8 lg:max-w-[31rem]">
             <div className="absolute -inset-8 -z-10 rounded-[2rem] bg-[radial-gradient(circle_at_50%_20%,rgba(216,138,75,0.16),transparent_20rem)]" />
             <LandingPreview moment={latestMoment} signedIn={Boolean(user)} />
           </div>
@@ -140,136 +142,7 @@ function LandingPreview({
   const note = moment.note?.trim() || moment.description || "Weather snapshot saved.";
   const photoLabel = moment.photoId ? (moment.isMockPhoto ? "Mock photo" : "Uploaded photo") : null;
   const photoSrc = moment.photoId ? `/api/photos/${moment.photoId}` : null;
-  const weatherBackground = getWeatherBackground(resolveMomentMood(moment));
-
-  return (
-    <div className="group overflow-hidden rounded-[1.75rem] border border-white/12 bg-[#071417]/76 shadow-[0_30px_92px_rgba(0,0,0,0.40)] backdrop-blur-2xl transition duration-300 lg:hover:-translate-y-0.5 lg:hover:shadow-[0_38px_112px_rgba(0,0,0,0.46)]">
-      <div className="relative isolate aspect-[4/3] min-h-[19rem] overflow-hidden sm:min-h-[20rem]">
-        <Image
-          alt=""
-          className="object-cover"
-          fill
-          priority
-          sizes="(min-width: 1024px) 40vw, 100vw"
-          src={weatherBackground.image}
-        />
-        <div className={`absolute inset-0 ${overlayClassFor(weatherBackground.overlay)}`} />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,12,18,0.12)_0%,rgba(5,12,18,0.44)_55%,rgba(5,12,18,0.88)_100%)]" />
-        <div className="absolute inset-x-5 top-5 flex items-start justify-between gap-4">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/14 bg-black/22 px-3 py-1.5 text-xs font-semibold text-aurora backdrop-blur-xl sm:text-sm">
-            <CloudSun aria-hidden className="size-4" />
-            Saved sky moment
-          </div>
-          <span className="rounded-full border border-white/14 bg-black/22 px-3 py-1.5 text-[0.68rem] font-semibold text-cloud/85 backdrop-blur-xl sm:text-xs">
-            {moment.condition}
-          </span>
-        </div>
-        <div className="absolute inset-x-5 bottom-5 grid gap-4 sm:inset-x-6 sm:bottom-6 sm:grid-cols-[minmax(0,1fr)_9.25rem] sm:items-end lg:grid-cols-[minmax(0,1fr)_10rem]">
-          <div className="min-w-0 max-w-[26rem]">
-            <p className="text-[0.68rem] uppercase tracking-[0.24em] text-cloud/55 sm:text-sm">
-              {moment.cityName}
-              {moment.country ? `, ${moment.country}` : ""}
-            </p>
-            <div className="mt-2.5 flex flex-wrap items-center gap-2 text-xs text-cloud/78 sm:text-sm">
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-black/16 px-2.5 py-1.5 backdrop-blur">
-                <Clock3 aria-hidden className="size-4" />
-                {capturedAt}
-              </span>
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-black/16 px-2.5 py-1.5 backdrop-blur">
-                {moment.comfortLabel ?? "Humid"}
-              </span>
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-black/16 px-2.5 py-1.5 text-xs font-semibold text-cloud/90 backdrop-blur">
-                {formatTemperature(moment.temperature, moment.units === "imperial" ? "imperial" : "metric")}
-              </span>
-            </div>
-          </div>
-          {photoSrc ? (
-            <div className="flex flex-col gap-1.5 justify-self-start sm:justify-self-end">
-              <div className="overflow-hidden rounded-[1rem] border border-white/18 bg-black/28 shadow-[0_14px_36px_rgba(0,0,0,0.30)] backdrop-blur-md">
-                <div className="relative aspect-[4/5] w-[6.75rem] sm:w-[7rem]">
-                  <Image
-                    alt={`${moment.cityName} sky photo`}
-                    className="object-cover"
-                    fill
-                    sizes="(min-width: 640px) 112px, 108px"
-                    src={photoSrc}
-                    unoptimized
-                  />
-                </div>
-              </div>
-              <p className="text-[0.68rem] font-medium text-cloud/68 sm:text-xs">
-                Captured for your journal
-              </p>
-            </div>
-          ) : (
-            <div className="justify-self-start sm:justify-self-end">
-              <p className="text-xs text-cloud/68 sm:text-sm">Captured for your journal</p>
-            </div>
-          )}
-        </div>
-      </div>
-      <div className="space-y-4 px-5 py-4 sm:px-6 sm:py-5">
-        <div className="grid gap-2.5">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-aurora">Latest sky moment</p>
-          {title ? <p className="text-sm font-semibold uppercase tracking-[0.16em] text-cloud/64">{title}</p> : null}
-          <h2 className="max-w-[22ch] text-balance text-[1.4rem] font-medium leading-[1.18] text-cloud sm:text-[1.7rem]">
-            {note}
-          </h2>
-        </div>
-        <div className="flex flex-wrap items-center gap-2.5 text-xs text-cloud/68 sm:text-sm">
-          <span className="inline-flex items-center gap-2 rounded-full bg-white/6 px-2.5 py-1.5">
-            <MapPin aria-hidden className="size-4" />
-            {moment.cityName}
-            {moment.country ? `, ${moment.country}` : ""}
-          </span>
-          {photoLabel ? (
-            <span className="inline-flex items-center gap-2 rounded-full bg-white/6 px-2.5 py-1.5">
-              {photoLabel}
-            </span>
-          ) : null}
-          {moodTags.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {moodTags.map((tag) => (
-                <span key={tag} className="rounded-full bg-white/6 px-2.5 py-1.5 font-semibold text-cloud/78">
-                  {tag}
-                </span>
-              ))}
-            </div>
-          ) : null}
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Link
-            className="inline-flex items-center gap-2 rounded-full bg-cloud px-4 py-2.5 text-sm font-semibold text-skyInk transition hover:bg-white focus:outline-none focus:ring-2 focus:ring-horizon/70"
-            href="/dashboard"
-          >
-            Open journal
-            <ArrowRight aria-hidden className="size-4" />
-          </Link>
-          <span className="text-sm text-cloud/50">Your next memory is waiting in the timeline.</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function overlayClassFor(mode: string) {
-  switch (mode) {
-    case "warm":
-      return "bg-[radial-gradient(circle_at_24%_20%,rgba(216,138,75,0.22),transparent_18rem),radial-gradient(circle_at_84%_18%,rgba(123,198,164,0.12),transparent_16rem),linear-gradient(120deg,rgba(17,28,34,0.78)_0%,rgba(8,17,24,0.48)_44%,rgba(5,12,18,0.84)_100%)]";
-    case "storm":
-      return "bg-[radial-gradient(circle_at_18%_18%,rgba(100,121,160,0.24),transparent_18rem),radial-gradient(circle_at_82%_18%,rgba(216,138,75,0.12),transparent_16rem),linear-gradient(125deg,rgba(7,16,25,0.90)_0%,rgba(10,18,28,0.70)_48%,rgba(4,9,16,0.90)_100%)]";
-    case "mist":
-      return "bg-[radial-gradient(circle_at_18%_20%,rgba(202,222,224,0.20),transparent_18rem),radial-gradient(circle_at_82%_18%,rgba(216,138,75,0.10),transparent_16rem),linear-gradient(125deg,rgba(8,17,22,0.72)_0%,rgba(14,25,31,0.62)_44%,rgba(4,8,12,0.80)_100%)]";
-    case "night":
-      return "bg-[radial-gradient(circle_at_18%_20%,rgba(123,198,164,0.16),transparent_18rem),radial-gradient(circle_at_82%_18%,rgba(255,255,255,0.08),transparent_16rem),linear-gradient(125deg,rgba(3,8,16,0.88)_0%,rgba(7,16,25,0.66)_48%,rgba(2,5,10,0.92)_100%)]";
-    case "soft-light":
-    default:
-      return "bg-[radial-gradient(circle_at_20%_20%,rgba(255,245,230,0.18),transparent_18rem),radial-gradient(circle_at_80%_18%,rgba(123,198,164,0.12),transparent_16rem),linear-gradient(120deg,rgba(7,20,28,0.60)_0%,rgba(9,18,25,0.38)_42%,rgba(5,12,18,0.76)_100%)]";
-  }
-}
-
-function resolveMomentMood(moment: LandingMoment) {
-  return resolveWeatherBackgroundMood({
+  const weatherBackground = getSkyMomentBackground({
     city: {
       id: "",
       name: moment.cityName,
@@ -299,5 +172,29 @@ function resolveMomentMood(moment: LandingMoment) {
     },
     forecast: [],
     isMock: Boolean(moment.isMockPhoto),
-  } satisfies WeatherResult);
+  });
+  const savedLater =
+    moment.createdAt &&
+    new Date(moment.createdAt).getTime() - new Date(moment.capturedAt).getTime() > 5 * 60 * 1000;
+
+  return (
+    <LandingSkyMomentCard
+      capturedAtLabel={capturedAt}
+      cityName={moment.cityName}
+      comfortLabel={moment.comfortLabel}
+      condition={moment.condition}
+      country={moment.country}
+      momentId={moment.id}
+      moodImageSrc={weatherBackground.image}
+      moodOverlayClassName={overlayClassForWeatherOverlay(weatherBackground.overlay)}
+      moodTags={moodTags}
+      note={note}
+      photoLabel={photoLabel}
+      photoSrc={photoSrc}
+      savedLater={savedLater}
+      temperature={moment.temperature}
+      title={title}
+      units={moment.units === "imperial" ? "imperial" : "metric"}
+    />
+  );
 }

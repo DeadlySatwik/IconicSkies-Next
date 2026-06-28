@@ -79,3 +79,10 @@ The product should not feel like a generic dark template. The visual language sh
 - Avoid text over busy image areas unless contrast is guaranteed.
 - Provide reduced-motion-safe interactions.
 - Collapsible sections should preserve state when closed, support keyboard toggling, and never trigger AI or network work simply because they were opened.
+
+## Sky Moment Capture
+
+- Saved moments with both atmosphere artwork and a private photo expose a compact `Mood view` / `Photo view` switch. The preference is stored locally as `skyMomentVisualMode`; moments without both media types do not show a redundant control.
+- The landing preview and journal timeline share the same visual component, preserving dimensions while swapping the primary and supporting images.
+- `Moment time & place` keeps current capture behavior as the default and progressively reveals a date/time and city lookup for backdated moments.
+- Backdated capture is limited to the previous 14 days. The journal is ordered by `capturedAt`, while the landing card remains the newest saved entry by `createdAt`.

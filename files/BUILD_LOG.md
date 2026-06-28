@@ -134,8 +134,8 @@
 
 - Files modified: `app/api/ai/journal-enhance/route.ts`, `components/sky/save-moment-form.tsx`.
 - Major decisions: simplify the API response to return only `enhancedNote`, and keep the client check focused on the HTTP status plus the returned note text.
-- Commands run: `npm run typecheck`, `npm run lint`, `npm run build`.
-- Quality results: typecheck passed, lint passed, and the production build passed.
+- Commands run: `npm run typecheck`, `npm run lint`, `npm run build`, `npm run test`.
+- Quality results: typecheck passed, lint passed, and the production build passed. Playwright reached the test runner but Chromium could not launch in the managed environment (`sandbox_host_linux.cc: Operation not permitted`), so no browser assertion executed.
 
 ## 2026-06-20 - AI Journal Polish Pass
 
@@ -201,3 +201,14 @@
 - Privacy behavior: Redis keys avoid raw emails, auth tokens, and exact GPS precision; cached coordinate previews are rounded before storage.
 - Verification: `npm run typecheck`, `npm run lint`, `npm run build`, and `PLAYWRIGHT_SKIP_WEBSERVER=1 PLAYWRIGHT_BASE_URL=http://localhost:3000 npm run test:e2e`.
 - Quality results: typecheck passed, lint passed, production build passed, and Playwright passed 7/8 with the desktop-only landing video toggle skipped on the mobile project.
+
+## 2026-06-28 - Sky Moment Capture Refinement
+
+- Added a shared, accessible mood/photo visual switch for landing and timeline previews, with a `localStorage` preference and no toggle when only one image exists.
+- Added `Moment time & place` controls for capture timestamps within the previous 14 days and server-resolved alternate cities.
+- Added Open-Meteo Historical Forecast normalization and a 30-day optional Redis cache keyed by rounded coordinates, capture hour, and units.
+- Kept the current save path unchanged for captures within 30 minutes of now. Backdated saves fail clearly if historical weather is unavailable rather than substituting current weather.
+- Updated photo attachment metadata after ownership validation so an uploaded photo can safely follow the final selected historical city and snapshot.
+- No database migration was required.
+- Commands run: `npm run typecheck`, `npm run lint`, `npm run build`.
+- Quality results: typecheck passed, lint passed, and the production build passed.

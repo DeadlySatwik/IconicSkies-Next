@@ -3,12 +3,60 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Camera, Check, ChevronDown, Copy, LoaderCircle, RefreshCw, Save, Sparkles, Tag } from "lucide-react";
+import {
+  Camera,
+  Check,
+  ChevronDown,
+  Copy,
+  LoaderCircle,
+  MapPin,
+  RefreshCw,
+  Save,
+  Search,
+  Sparkles,
+  Tag,
+} from "lucide-react";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { journalEnhancementStyles, type JournalEnhancementStyle } from "@/lib/ai/journal-styles";
 
 const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const maxUploadSizeBytes = 8 * 1024 * 1024;
+
+function toDateTimeLocalValue(value: string | Date) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const pad = (number: number) => String(number).padStart(2, "0");
+  return [
+    date.getFullYear(),
+    pad(date.getMonth() + 1),
+    pad(date.getDate()),
+  ].join("-")
+    .concat("T")
+    .concat([pad(date.getHours()), pad(date.getMinutes())].join(":"));
+}
+
+function parseDateTimeLocalValue(value: string) {
+  if (!value.trim()) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatLocationLabel(location: {
+  name: string;
+  country: string | null;
+}) {
+  return location.country ? `${location.name}, ${location.country}` : location.name;
+}
+
+function formatHumanDateTime(date: Date) {
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
 
 export function SaveMomentForm({
   cityId,
@@ -17,6 +65,10 @@ export function SaveMomentForm({
   signedIn,
   aiEnabled,
   cityName,
+  cityCountry = null,
+  cityRegion = null,
+  cityLatitude = null,
+  cityLongitude = null,
   condition,
   temperature,
   units,
@@ -30,6 +82,10 @@ export function SaveMomentForm({
   signedIn: boolean;
   aiEnabled?: boolean;
   cityName: string;
+  cityCountry?: string | null;
+  cityRegion?: string | null;
+  cityLatitude?: number | null;
+  cityLongitude?: number | null;
   condition: string;
   temperature: number;
   units: "metric" | "imperial";
@@ -56,10 +112,29 @@ export function SaveMomentForm({
   const [suggestedMoodTags, setSuggestedMoodTags] = useState<string[]>([]);
   const [aiAssistantOpen, setAiAssistantOpen] = useState(false);
   const [insightOpen, setInsightOpen] = useState(false);
+  const [timePlaceOpen, setTimePlaceOpen] = useState(false);
+  const [usePastTime, setUsePastTime] = useState(false);
+  const [capturedAtInput, setCapturedAtInput] = useState(() => toDateTimeLocalValue(capturedAt));
+  const [locationQuery, setLocationQuery] = useState(cityName);
+  const [selectedLocation, setSelectedLocation] = useState({
+    name: cityName,
+    country: cityCountry,
+    region: cityRegion,
+    latitude: cityLatitude,
+    longitude: cityLongitude,
+  });
+  const [locationStatus, setLocationStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [locationError, setLocationError] = useState("");
+  const [locationMessage, setLocationMessage] = useState("");
   const router = useRouter();
   const cinematic = variant === "cinematic";
   const aiConfigured = Boolean(aiEnabled);
   const currentMoodTags = parseMoodTagsInput(moodTagsInput);
+  const selectedCapturedDate = usePastTime ? parseDateTimeLocalValue(capturedAtInput) : new Date(capturedAt);
+  const selectedLocationLabel = formatLocationLabel(selectedLocation);
+  const momentTimeSummary = usePastTime
+    ? `${selectedCapturedDate ? formatHumanDateTime(selectedCapturedDate) : "Backdated moment"} · ${selectedLocationLabel}`
+    : `Now · ${selectedLocationLabel}`;
   const sectionClass = cinematic
     ? "rounded-2xl border border-skyInk/10 bg-[#eef4f1] p-6 text-skyInk shadow-[0_22px_70px_rgba(0,0,0,0.18)] sm:p-7"
     : "rounded-xl border border-skyInk/10 bg-cloud p-6 shadow-soft";
@@ -236,6 +311,83 @@ export function SaveMomentForm({
     setAiMessage("Copied the AI-polished note.");
   }
 
+  async function resolveCapturedLocation() {
+    const query = locationQuery.trim();
+    if (query.length < 2) {
+      setLocationStatus("error");
+      setLocationError("Enter a city or town.");
+      return;
+    }
+
+    setTimePlaceOpen(true);
+    setLocationStatus("loading");
+    setLocationError("");
+    setLocationMessage("");
+
+    try {
+      const response = await fetch(`/api/weather?city=${encodeURIComponent(query)}&units=${units}`, {
+        method: "GET",
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | {
+            ok?: boolean;
+            error?: string;
+            weather?: {
+              isMock?: boolean;
+              city?: {
+                name: string;
+                country: string | null;
+                region: string | null;
+                lat: number | null;
+                lon: number | null;
+              };
+            };
+          }
+        | null;
+
+      if (!response.ok || !payload?.ok || !payload.weather?.city) {
+        throw new Error(payload?.error ?? "Could not find that location. Try another city.");
+      }
+
+      if (payload.weather.isMock) {
+        throw new Error("Could not find that location. Try another city.");
+      }
+
+      setSelectedLocation({
+        name: payload.weather.city.name,
+        country: payload.weather.city.country,
+        region: payload.weather.city.region,
+        latitude: payload.weather.city.lat,
+        longitude: payload.weather.city.lon,
+      });
+      setLocationQuery(payload.weather.city.name);
+      setLocationMessage(
+        `Using ${formatLocationLabel({
+          name: payload.weather.city.name,
+          country: payload.weather.city.country,
+        })}.`,
+      );
+      setLocationStatus("ready");
+    } catch (error) {
+      setLocationStatus("error");
+      setLocationError(error instanceof Error ? error.message : "Could not find that location. Try another city.");
+    }
+  }
+
+  function resetCapturedLocation() {
+    setSelectedLocation({
+      name: cityName,
+      country: cityCountry,
+      region: cityRegion,
+      latitude: cityLatitude,
+      longitude: cityLongitude,
+    });
+    setLocationQuery(cityName);
+    setLocationStatus("idle");
+    setLocationError("");
+    setLocationMessage("Using the current city from this page.");
+  }
+
   async function uploadSelectedFile(file: File) {
     const signResponse = await fetch("/api/uploads/sign", {
       method: "POST",
@@ -314,6 +466,26 @@ export function SaveMomentForm({
     setStatus("saving");
     setMessage("");
 
+    if (locationStatus === "loading") {
+      setStatus("error");
+      setMessage("Wait for the location lookup to finish.");
+      return;
+    }
+
+    const capturedMomentAt = usePastTime ? parseDateTimeLocalValue(capturedAtInput) : new Date(capturedAt);
+    if (!capturedMomentAt) {
+      setStatus("error");
+      setMessage("Sky Moments can be backdated up to 14 days.");
+      return;
+    }
+
+    const now = Date.now();
+    if (capturedMomentAt.getTime() > now || capturedMomentAt.getTime() < now - 14 * 24 * 60 * 60 * 1000) {
+      setStatus("error");
+      setMessage("Sky Moments can be backdated up to 14 days.");
+      return;
+    }
+
     let photoId: string | undefined;
 
     try {
@@ -339,6 +511,15 @@ export function SaveMomentForm({
         moodTags: parseMoodTagsInput(moodTagsInput),
         note,
         attachMockPhoto: gcsEnabled ? false : attachMockPhoto,
+        units,
+        capturedAt: capturedMomentAt.toISOString(),
+        capturedLocation: {
+          name: selectedLocation.name,
+          country: selectedLocation.country,
+          region: selectedLocation.region,
+          latitude: selectedLocation.latitude,
+          longitude: selectedLocation.longitude,
+        },
       }),
     });
 
@@ -408,6 +589,114 @@ export function SaveMomentForm({
             placeholder="First day of college, rain before the train, sunset after exams..."
           />
         </div>
+        <CollapsibleSection
+          action={null}
+          className="border-slate-200 bg-[#f4f7f4] text-slate-950 shadow-[0_14px_40px_rgba(15,23,42,0.08)]"
+          contentClassName="pt-0"
+          defaultOpen={false}
+          open={timePlaceOpen}
+          subtitle="Backdate up to 14 days and choose the city where this moment happened."
+          summary={momentTimeSummary}
+          title="Moment time & place"
+          variant="light"
+          onOpenChange={setTimePlaceOpen}
+        >
+          <div className="space-y-4 px-4 pb-4">
+            <label className="flex items-start gap-3 rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-950 shadow-sm">
+              <input
+                className="mt-1 rounded border-slate-400 text-slate-900 focus:ring-slate-400/30"
+                checked={usePastTime}
+                type="checkbox"
+                onChange={(event) => {
+                  setUsePastTime(event.target.checked);
+                  setTimePlaceOpen(true);
+                  if (!event.target.checked) {
+                    setLocationError("");
+                    setLocationStatus("idle");
+                  }
+                }}
+              />
+              <div className="min-w-0">
+                <p className="font-semibold text-slate-950">Use a past time</p>
+                <p className="mt-1 text-sm leading-6 text-slate-700">
+                  You can save moments from the last 14 days.
+                </p>
+              </div>
+            </label>
+
+            <div className={usePastTime ? "grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]" : "grid gap-4"}>
+              <div className={usePastTime ? "space-y-2" : "space-y-2 sm:max-w-sm"}>
+                <label className="text-sm font-semibold text-slate-950" htmlFor="moment-captured-time">
+                  Date and time
+                </label>
+                <input
+                  id="moment-captured-time"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-950 placeholder:text-slate-500 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-700 disabled:placeholder:text-slate-500 disabled:opacity-100"
+                  max={toDateTimeLocalValue(new Date())}
+                  min={toDateTimeLocalValue(new Date(Date.now() - 14 * 24 * 60 * 60 * 1000))}
+                  type="datetime-local"
+                  value={capturedAtInput}
+                  onChange={(event) => {
+                    setCapturedAtInput(event.target.value);
+                    setTimePlaceOpen(true);
+                  }}
+                  disabled={!usePastTime}
+                />
+                <p className="text-xs text-slate-600">
+                  {usePastTime ? "The moment time will be used to fetch historical weather." : "Leave this off to save the sky as it is right now."}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-950" htmlFor="captured-location">
+                  Captured location
+                </label>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <input
+                    id="captured-location"
+                    className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-950 placeholder:text-slate-500 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-700 disabled:placeholder:text-slate-500 disabled:opacity-100"
+                    placeholder="Search a city or town"
+                    value={locationQuery}
+                    onChange={(event) => {
+                      setLocationQuery(event.target.value);
+                      setLocationStatus("idle");
+                      setLocationError("");
+                      setLocationMessage("");
+                      setTimePlaceOpen(true);
+                    }}
+                  />
+                  <button
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400/40 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:opacity-100"
+                    disabled={locationStatus === "loading"}
+                    type="button"
+                    onClick={() => void resolveCapturedLocation()}
+                  >
+                    {locationStatus === "loading" ? <LoaderCircle aria-hidden className="size-4 animate-spin" /> : <Search aria-hidden className="size-4" />}
+                    Find city
+                  </button>
+                </div>
+                <p className="text-xs text-slate-600">
+                  Use the city where the moment actually happened.
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-800">
+                    <MapPin aria-hidden className="size-3.5" />
+                    {selectedLocationLabel}
+                  </span>
+                  <button
+                    className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-800 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400/30"
+                    type="button"
+                    onClick={() => resetCapturedLocation()}
+                  >
+                    Use current city
+                  </button>
+                </div>
+                {locationMessage ? <p className="text-sm font-medium text-slate-700">{locationMessage}</p> : null}
+                {locationError ? <p className="text-sm font-medium text-red-700">{locationError}</p> : null}
+              </div>
+            </div>
+          </div>
+        </CollapsibleSection>
         <CollapsibleSection
           action={null}
           className="border-slate-200 bg-[#eef4f1] text-slate-950 shadow-[0_14px_40px_rgba(15,23,42,0.10)]"
@@ -724,7 +1013,7 @@ export function SaveMomentForm({
         <button
           className={primaryButtonClass}
           type="submit"
-          disabled={status === "saving"}
+          disabled={status === "saving" || locationStatus === "loading"}
         >
           {status === "saving" ? <LoaderCircle aria-hidden className="size-4 animate-spin" /> : <Save aria-hidden className="size-4" />}
           Save sky moment

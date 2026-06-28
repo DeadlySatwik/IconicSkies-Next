@@ -13,7 +13,7 @@ import { cities, searchHistory, weatherSnapshots } from "@/lib/db/schema";
 import { normalizeEmail, toNumber } from "@/lib/utils";
 import { getMockWeather } from "./mock";
 import type { CurrentLocationResolution } from "./current-location";
-import type { ForecastPoint, WeatherResult, WeatherUnits } from "./types";
+import type { ForecastPoint, WeatherResult, WeatherSource, WeatherUnits } from "./types";
 
 type OpenWeatherCurrent = {
   name: string;
@@ -109,6 +109,45 @@ function weatherResultForCache(result: WeatherResult, roundCoordinates = false) 
       lon: roundCoordinates ? roundCachedCoordinate(result.city.lon) : result.city.lon,
     },
   } satisfies WeatherResult;
+}
+
+export async function getWeatherSelectionContext(cityId: string, weatherSnapshotId: string) {
+  const db = getDb();
+  const rows = await db
+    .select({
+      cityId: cities.id,
+      cityName: cities.name,
+      country: cities.country,
+      region: cities.region,
+      lat: cities.lat,
+      lon: cities.lon,
+      snapshotId: weatherSnapshots.id,
+      units: weatherSnapshots.units,
+      capturedAt: weatherSnapshots.capturedAt,
+    })
+    .from(cities)
+    .innerJoin(weatherSnapshots, and(eq(weatherSnapshots.cityId, cities.id), eq(weatherSnapshots.id, weatherSnapshotId)))
+    .where(eq(cities.id, cityId))
+    .limit(1);
+
+  const row = rows[0];
+  if (!row) return null;
+
+  return {
+    city: {
+      id: row.cityId,
+      name: row.cityName,
+      country: row.country,
+      region: row.region,
+      lat: toNumber(row.lat),
+      lon: toNumber(row.lon),
+    },
+    snapshot: {
+      id: row.snapshotId,
+      units: row.units as WeatherUnits,
+      capturedAt: row.capturedAt.toISOString(),
+    },
+  };
 }
 
 async function getCachedWeatherByCity(cityName: string, units: WeatherUnits) {
@@ -349,7 +388,7 @@ async function findCachedWeather(cityName: string, units: WeatherUnits) {
     },
     snapshot: {
       id: row.snapshotId,
-      source: row.source as "openweather" | "mock",
+      source: row.source as WeatherSource,
       units: row.units as WeatherUnits,
       temperature: Number(row.temperature),
       feelsLike: toNumber(row.feelsLike),
@@ -433,7 +472,7 @@ function forecastFromOpenWeather(payload: OpenWeatherForecast): ForecastPoint[] 
     }));
 }
 
-async function persistWeather(result: Omit<WeatherResult, "isMock"> & { isMock: boolean }) {
+export async function persistWeatherResult(result: Omit<WeatherResult, "isMock"> & { isMock: boolean }) {
   const db = getDb();
   const [city] = await db
     .insert(cities)
@@ -499,7 +538,7 @@ function weatherResultFromOpenWeather(
   payload: OpenWeatherPayload,
   units: WeatherUnits,
   cityNameFallback: string,
-  source: "openweather" | "mock" = "openweather",
+  source: WeatherSource = "openweather",
 ): WeatherResult {
   const current = payload.current;
   const weather = current.weather?.[0];
@@ -739,7 +778,7 @@ export async function getWeatherForCity(
   if (preview.isMock) {
     const persisted = databaseUnavailable
       ? fallbackWeatherToResult(preview)
-      : await persistWeather(preview).catch((error) => {
+      : await persistWeatherResult(preview).catch((error) => {
           if (!isDatabaseConnectionError(error)) throw error;
           return fallbackWeatherToResult(preview);
         });
@@ -755,7 +794,7 @@ export async function getWeatherForCity(
 
   const persisted = databaseUnavailable
     ? fallbackWeatherToResult(result)
-    : await persistWeather(result).catch((error) => {
+    : await persistWeatherResult(result).catch((error) => {
         if (!isDatabaseConnectionError(error)) throw error;
         return fallbackWeatherToResult(result);
       });

@@ -28,6 +28,8 @@
 - [x] AI Journal Enhancement.
 - [x] Progressive disclosure for dashboard and save-form optional panels.
 - [x] OTP validation foundation for password-first login/register, Redis-only challenges, and additive email verification.
+- [x] Sky Moment mood/photo visual preference.
+- [x] Backdated Sky Moments with captured city selection and historical weather snapshots.
 
 ## Secondary If Time Allows
 

@@ -60,6 +60,7 @@ export async function createSkyMoment(input: {
   moodTags?: string[] | null;
   note: string;
   attachMockPhoto: boolean;
+  capturedAt?: Date;
 }) {
   if (hasFallbackUser(input.userId)) {
     return createFallbackMoment({
@@ -70,6 +71,7 @@ export async function createSkyMoment(input: {
       title: input.title,
       moodTags: input.moodTags,
       note: input.note,
+      capturedAt: input.capturedAt,
     });
   }
 
@@ -79,8 +81,6 @@ export async function createSkyMoment(input: {
           where: and(
             eq(skyPhotos.id, input.photoId),
             eq(skyPhotos.uploaderUserId, input.userId),
-            eq(skyPhotos.cityId, input.cityId),
-            eq(skyPhotos.weatherSnapshotId, input.weatherSnapshotId),
           ),
         })
       : null;
@@ -88,6 +88,27 @@ export async function createSkyMoment(input: {
     if (input.photoId && !uploadedPhoto) {
       throw new Error("Photo not found for this sky moment.");
     }
+
+    const attachedPhoto =
+      uploadedPhoto &&
+      (uploadedPhoto.cityId !== input.cityId ||
+        uploadedPhoto.weatherSnapshotId !== input.weatherSnapshotId)
+        ? (
+            await getDb()
+              .update(skyPhotos)
+              .set({
+                cityId: input.cityId,
+                weatherSnapshotId: input.weatherSnapshotId,
+              })
+              .where(
+                and(
+                  eq(skyPhotos.id, uploadedPhoto.id),
+                  eq(skyPhotos.uploaderUserId, input.userId),
+                ),
+              )
+              .returning()
+          )[0]
+        : uploadedPhoto;
 
     const mockPhoto = !uploadedPhoto && input.attachMockPhoto
       ? await createMockPhotoForMoment({
@@ -97,7 +118,7 @@ export async function createSkyMoment(input: {
         })
       : null;
 
-    const photoId = uploadedPhoto?.id ?? mockPhoto?.id;
+    const photoId = attachedPhoto?.id ?? mockPhoto?.id;
 
     const [moment] = await getDb()
       .insert(skyMoments)
@@ -109,7 +130,7 @@ export async function createSkyMoment(input: {
         title: input.title?.trim() || null,
         moodTags: input.moodTags && input.moodTags.length > 0 ? input.moodTags : null,
         note: input.note,
-        capturedAt: new Date(),
+        capturedAt: input.capturedAt ?? new Date(),
       })
       .returning();
 
@@ -124,6 +145,7 @@ export async function createSkyMoment(input: {
       title: input.title,
       moodTags: input.moodTags,
       note: input.note,
+      capturedAt: input.capturedAt,
     });
   }
 }
@@ -135,13 +157,14 @@ export async function listSkyMoments(userId: string) {
     const rows = await getDb()
       .select({
         id: skyMoments.id,
-      note: skyMoments.note,
-      title: skyMoments.title,
-      moodTags: skyMoments.moodTags,
-      capturedAt: skyMoments.capturedAt,
-      updatedAt: skyMoments.updatedAt,
-      photoId: skyMoments.photoId,
-      cityName: cities.name,
+        note: skyMoments.note,
+        title: skyMoments.title,
+        moodTags: skyMoments.moodTags,
+        capturedAt: skyMoments.capturedAt,
+        createdAt: skyMoments.createdAt,
+        updatedAt: skyMoments.updatedAt,
+        photoId: skyMoments.photoId,
+        cityName: cities.name,
       country: cities.country,
         temperature: weatherSnapshots.temperature,
         units: weatherSnapshots.units,
@@ -171,6 +194,7 @@ export async function listSkyMoments(userId: string) {
         moodTags: Array.isArray(row.moodTags)
           ? row.moodTags.filter((tag): tag is string => typeof tag === "string")
           : null,
+        createdAt: row.createdAt,
         updatedAt: row.updatedAt,
       };
     });

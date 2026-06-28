@@ -174,6 +174,10 @@ export default async function CityPage({
             signedIn={Boolean(user)}
             aiEnabled={Boolean(process.env.GROQ_API_KEY)}
             cityName={weather.city.name}
+            cityCountry={weather.city.country}
+            cityRegion={weather.city.region}
+            cityLatitude={weather.city.lat}
+            cityLongitude={weather.city.lon}
             condition={weather.snapshot.condition}
             temperature={weather.snapshot.temperature}
             units={weather.snapshot.units}

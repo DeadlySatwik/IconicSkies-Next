@@ -145,6 +145,8 @@ Update on 2026-06-18: favorite locations are now implemented. Signed-in users ca
 - Latest verification on 2026-06-21: `npm run typecheck`, `npm run lint`, `npm run build`, and `PLAYWRIGHT_SKIP_WEBSERVER=1 PLAYWRIGHT_BASE_URL=http://localhost:3000 npm run test:e2e` passed. Playwright reported 7 passed and 1 skipped because the landing video toggle is desktop-only on the mobile project.
 - Update on 2026-06-22: OTP validation now sits alongside password auth. Email verification is backed by Redis-only challenges, login remains password-first unless `otp_required=true`, and registration stays non-blocking so current Playwright flows keep working. SMS support remains provider-shaped and disabled unless configured.
 - Verification note on 2026-06-22: `npm run typecheck`, `npm run lint`, and `npm run build` passed after the OTP pass. Playwright e2e could not finish in this sandbox because Chromium failed to launch with a Linux sandbox permission error, so browser smoke coverage needs a rerun in a less constrained environment.
+- Update on 2026-06-28: Sky Moments can be backdated up to 14 days with a server-resolved captured city and Open-Meteo Historical Forecast snapshot. Landing and timeline cards now share a local mood/photo visual preference when both images exist. No schema migration was needed.
+- Verification on 2026-06-28: `npm run typecheck`, `npm run lint`, and `npm run build` passed. `npm run test` reached Playwright, but Chromium was blocked before launch by the managed Linux sandbox, so browser coverage needs a local rerun. Live historical weather and private upload reassociation also need credential-backed checks.
 
 ## Exact Next Steps
 
@@ -162,6 +164,7 @@ Update on 2026-06-18: favorite locations are now implemented. Signed-in users ca
 12. Keep Redis optional in local development; the app should still function normally when the Upstash env vars are absent.
 13. If OTP settings grow, keep the verification prompt in Settings as the main place for email/phone verification and keep register/login additive rather than blocking existing users.
 14. Rerun Playwright smoke tests in an environment that permits Chromium to start cleanly; the failure here was a sandbox-launch issue, not an app runtime crash.
+15. Manually save one backdated moment for the current city and one for a different city, then confirm the timeline location/time, historical condition, private photo, and mood/photo switch.
 
 ## Resume Prompt
 

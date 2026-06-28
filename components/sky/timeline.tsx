@@ -1,8 +1,9 @@
-import Image from "next/image";
 import { CloudSun, MapPin } from "lucide-react";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
+import { SkyMomentVisual } from "@/components/sky/sky-moment-visual";
 import { formatTemperature } from "@/lib/utils";
 import { groupMomentsByMonth } from "@/lib/sky/monthly-recap";
+import { getSkyMomentBackground, overlayClassForWeatherOverlay } from "@/lib/sky/moment-visual";
 
 type Moment = {
   id: string;
@@ -10,6 +11,7 @@ type Moment = {
   title?: string | null;
   moodTags?: string[] | null;
   capturedAt: Date;
+  createdAt: Date;
   favoriteLabel?: string | null;
   photoId: string | null;
   cityName: string;
@@ -32,9 +34,42 @@ function renderMomentCard(moment: Moment) {
     : [];
   const photoSrc = moment.isMockPhoto && moment.photoUrl
     ? moment.photoUrl
-    : hasPhoto
-      ? `/api/photos/${moment.photoId}`
-      : null;
+      : hasPhoto
+        ? `/api/photos/${moment.photoId}`
+        : null;
+  const weatherBackground = getSkyMomentBackground({
+    city: {
+      id: "",
+      name: moment.cityName,
+      country: moment.country,
+      region: null,
+      lat: null,
+      lon: null,
+    },
+    snapshot: {
+      id: moment.id,
+      source: moment.isMockPhoto ? "mock" : "openweather",
+      units: moment.units === "imperial" ? "imperial" : "metric",
+      temperature: moment.temperature,
+      feelsLike: null,
+      humidity: null,
+      windSpeed: null,
+      condition: moment.condition,
+      description: moment.description,
+      iconCode: moment.iconCode,
+      weatherId: null,
+      cloudiness: null,
+      timezoneOffset: null,
+      sunrise: null,
+      sunset: null,
+      comfortLabel: moment.comfortLabel,
+      capturedAt: moment.capturedAt.toISOString(),
+    },
+    forecast: [],
+    isMock: Boolean(moment.isMockPhoto),
+  });
+  const savedLater =
+    new Date(moment.createdAt).getTime() - moment.capturedAt.getTime() > 5 * 60 * 1000;
 
   return (
     <article
@@ -45,18 +80,18 @@ function renderMomentCard(moment: Moment) {
       }
       key={moment.id}
     >
-      {photoSrc ? (
-        <div className="relative aspect-[4/3] min-h-40 overflow-hidden rounded-xl bg-[#071417] md:aspect-auto md:h-full">
-          <Image
-            src={photoSrc}
-            alt=""
-            fill
-            sizes="(min-width: 768px) 240px, 100vw"
-            className="object-cover"
-            unoptimized
-          />
-        </div>
-      ) : null}
+      <SkyMomentVisual
+        className="relative aspect-[4/3] min-h-40 overflow-hidden rounded-xl bg-[#071417] md:aspect-auto md:h-full"
+        moodAlt={`${moment.cityName} weather mood`}
+        moodBadge="Mood"
+        moodImageSrc={weatherBackground.image}
+        overlayClassName={overlayClassForWeatherOverlay(weatherBackground.overlay)}
+        photoAlt={`${moment.cityName} sky photo`}
+        photoBadge="Photo"
+        photoSrc={photoSrc}
+        showToggle={hasPhoto}
+        storageScope={moment.id}
+      />
       <div className="flex flex-col justify-between gap-5">
         <div>
           <div className="flex flex-wrap items-center gap-3 text-sm text-cloud/76">
@@ -66,6 +101,7 @@ function renderMomentCard(moment: Moment) {
               {moment.country ? `, ${moment.country}` : ""}
             </span>
             <span>
+              {savedLater ? "Captured " : ""}
               {new Intl.DateTimeFormat("en", {
                 month: "short",
                 day: "numeric",
@@ -74,6 +110,11 @@ function renderMomentCard(moment: Moment) {
                 minute: "2-digit",
               }).format(moment.capturedAt)}
             </span>
+            {savedLater ? (
+              <span className="rounded-full border border-white/12 bg-white/8 px-2 py-1 text-xs font-semibold text-cloud/90">
+                Saved later
+              </span>
+            ) : null}
             {moment.favoriteLabel ? (
               <span className="rounded-full border border-aurora/20 bg-aurora/14 px-2 py-1 text-xs font-semibold text-cloud">
                 {moment.favoriteLabel}

@@ -58,6 +58,27 @@ export function weatherCoordsCacheKey(latitude: number, longitude: number, units
   ].join(":");
 }
 
+export function weatherHistoryCacheKey(
+  latitude: number,
+  longitude: number,
+  capturedAtIso: string,
+  units: string,
+) {
+  const roundedLat = Number(latitude.toFixed(3));
+  const roundedLon = Number(longitude.toFixed(3));
+  const capturedHour = new Date(capturedAtIso).toISOString().slice(0, 13);
+
+  return [
+    "weather",
+    "history",
+    CACHE_VERSION,
+    String(roundedLat),
+    String(roundedLon),
+    capturedHour,
+    normalizeToken(units),
+  ].join(":");
+}
+
 export function aiRateLimitKey(scope: string, identifier: string) {
   return ["rate", scope, CACHE_VERSION, hashCacheToken(identifier)].join(":");
 }

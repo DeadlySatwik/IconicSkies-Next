@@ -28,14 +28,14 @@ type FallbackCity = {
   region: string | null;
   lat: number | null;
   lon: number | null;
-  source: "openweather" | "mock";
+  source: "openweather" | "openmeteo" | "mock";
   normalizedName: string;
 };
 
 type FallbackSnapshot = {
   id: string;
   cityId: string;
-  source: "openweather" | "mock";
+  source: "openweather" | "openmeteo" | "mock";
   units: "metric" | "imperial";
   temperature: number;
   feelsLike: number | null;
@@ -240,9 +240,10 @@ export function createFallbackMoment(input: {
   title?: string | null;
   moodTags?: string[] | null;
   note: string;
+  capturedAt?: Date;
 }) {
   const state = getState();
-  const now = new Date();
+  const now = input.capturedAt ?? new Date();
   const moment: FallbackMoment = {
     id: randomUUID(),
     userId: input.userId,
