@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { getPostAuthRedirectPath } from "@/lib/auth/email-verification";
 import { createSession, setSessionCookie, getCurrentUser } from "@/lib/auth/session";
 import { isRedisConfigured } from "@/lib/cache/redis";
 import { checkOptionalRateLimit } from "@/lib/cache/rate-limit";
@@ -96,9 +97,21 @@ export async function POST(request: Request) {
     const dbSession = await createSession(userId);
     await setSessionCookie(dbSession.token, dbSession.expiresAt);
 
+    let redirectTo = "/dashboard";
+    try {
+      const loginUser = await getDb().query.users.findFirst({
+        where: eq(users.id, userId),
+      });
+      redirectTo = getPostAuthRedirectPath(loginUser);
+    } catch (error) {
+      if (!isDatabaseConnectionError(error)) throw error;
+      redirectTo = getPostAuthRedirectPath(findFallbackUserById(userId));
+    }
+
     return NextResponse.json({
       ok: true,
       message: "Code verified. You’re signed in.",
+      redirectTo,
     });
   }
 

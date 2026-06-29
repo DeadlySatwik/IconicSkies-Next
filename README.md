@@ -17,6 +17,7 @@ IconicSkies is a full-stack weather and Sky Journal app built around one idea: r
 - Mood view and Photo view switching for saved Sky Moment visuals
 - Private Google Cloud Storage photo uploads through signed URLs and an authenticated media route
 - Redis-backed email OTP verification and optional email OTP sign-in protection
+- Mandatory one-time email verification after registration, with local authenticity checks before OTP is sent
 - Groq-powered note enhancement, title and mood tag suggestions, and monthly recap generation
 - Upstash Redis caching for recap and weather-derived responses, plus AI route rate limiting
 - Playwright smoke coverage for core weather, journal, and auth flows
@@ -78,6 +79,7 @@ Some features degrade cleanly in local development when optional services are no
 - Weather can fall back to mock/demo behavior without `OPENWEATHER_API_KEY`
 - GCS uploads can fall back to mock paths without GCS credentials
 - Email OTP is unavailable without an email provider
+- Registration email verification can be blocked when authenticity checks fail or email delivery is not configured
 - Redis caching and rate limiting are skipped when Upstash env vars are missing
 
 ## Environment Variables
@@ -122,6 +124,12 @@ Copy `.env.example` to `.env.local` and set only the services you need.
 - `RESEND_API_KEY`
 - `EMAIL_FROM`
 
+### Optional email authenticity provider
+
+- `EMAIL_VALIDATION_PROVIDER`
+- `EMAIL_VALIDATION_API_KEY`
+- `EMAIL_VALIDATION_STRICT`
+
 ### Optional and non-current SMS placeholders
 
 - `SMS_OTP_PROVIDER`
@@ -163,6 +171,8 @@ npm run db:studio
 ## Privacy and Security Highlights
 
 - Password auth remains the default sign-in path
+- New registrations must complete one-time email verification before protected app features are available
+- Email syntax, reserved/test domains, disposable domains, and MX availability are checked before registration OTP is sent
 - Email OTP challenges are stored only in Redis, HMAC-hashed, short-lived, and never persisted in PostgreSQL
 - Private sky photos are served through `/api/photos/[id]` after ownership checks
 - AI routes send only minimal journal context and never send GCS object paths or private media URLs

@@ -11,7 +11,18 @@ async function main() {
   });
 
   if (existing) {
-    console.log("Demo user already exists.");
+    if (!existing.emailVerifiedAt) {
+      await db
+        .update(users)
+        .set({
+          emailVerifiedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, existing.id));
+      console.log("Demo user already existed and is now marked verified.");
+    } else {
+      console.log("Demo user already exists.");
+    }
     await getSql().end();
     return;
   }
@@ -26,6 +37,7 @@ async function main() {
     .insert(users)
     .values({
       email: demoEmail,
+      emailVerifiedAt: new Date(),
       name: "Demo Sky Keeper",
       passwordHash,
     })

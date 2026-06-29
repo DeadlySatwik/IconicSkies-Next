@@ -27,7 +27,7 @@ export function OtpVerificationForm({
   identifier: string;
   title: string;
   description?: string;
-  onVerified?: () => void;
+  onVerified?: (redirectTo?: string) => void;
   initialMessage?: string;
   requestButtonLabel?: string;
   verifyButtonLabel?: string;
@@ -101,7 +101,7 @@ export function OtpVerificationForm({
       });
 
       const payload = (await response.json().catch(() => null)) as
-        | { ok?: boolean; message?: string; error?: string }
+        | { ok?: boolean; message?: string; error?: string; redirectTo?: string }
         | null;
 
       if (!response.ok || !payload?.ok) {
@@ -132,7 +132,7 @@ export function OtpVerificationForm({
       });
 
       const payload = (await response.json().catch(() => null)) as
-        | { ok?: boolean; message?: string; error?: string }
+        | { ok?: boolean; message?: string; error?: string; redirectTo?: string }
         | null;
 
       if (!response.ok || !payload?.ok) {
@@ -141,7 +141,7 @@ export function OtpVerificationForm({
       }
 
       setMessage(payload.message ?? "Code verified.");
-      onVerified?.();
+      onVerified?.(payload.redirectTo);
     } catch {
       setError("Invalid or expired code.");
     } finally {

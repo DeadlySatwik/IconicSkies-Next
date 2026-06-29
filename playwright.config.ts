@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+process.env.OTP_DEV_LOG_CODES ??= "true";
+
 export default defineConfig({
   testDir: "./tests/e2e",
   timeout: 30_000,

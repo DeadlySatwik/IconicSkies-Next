@@ -1,3 +1,4 @@
+import { emailVerificationRequiredResponse, isEmailVerified } from "@/lib/auth/email-verification";
 import { getCurrentUser } from "@/lib/auth/session";
 import {
   listFavoriteLocations,
@@ -9,6 +10,7 @@ import { jsonError, favoriteLocationCreateSchema } from "@/lib/security/validati
 export async function GET(request: Request) {
   const user = await getCurrentUser();
   if (!user) return jsonError("Sign in to view your favorite locations.", 401);
+  if (!isEmailVerified(user)) return emailVerificationRequiredResponse("Verify your email to view favorite locations.");
 
   const url = new URL(request.url);
   const preview = url.searchParams.get("preview") === "1" || url.searchParams.get("withWeather") === "1";
@@ -28,6 +30,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) return jsonError("Sign in to save a favorite location.", 401);
+  if (!isEmailVerified(user)) return emailVerificationRequiredResponse("Verify your email to save a favorite location.");
 
   const body = await request.json().catch(() => null);
   const parsed = favoriteLocationCreateSchema.safeParse(body);

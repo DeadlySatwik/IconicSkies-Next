@@ -5,6 +5,7 @@ import { FavoriteLocationsGrid } from "@/components/favorites/favorite-locations
 import { AtmosphericPageShell } from "@/components/layout/atmospheric-page-shell";
 import { MonthlySkyRecap } from "@/components/sky/monthly-sky-recap";
 import { SkyTimeline } from "@/components/sky/timeline";
+import { buildVerifyEmailHref, isEmailVerified } from "@/lib/auth/email-verification";
 import { getCurrentUser } from "@/lib/auth/session";
 import {
   favoriteLabelForMoment,
@@ -25,6 +26,7 @@ export default async function DashboardPage({
 }) {
   const user = await getCurrentUser().catch(() => null);
   if (!user) redirect("/login");
+  if (!isEmailVerified(user)) redirect(buildVerifyEmailHref("/dashboard"));
 
   const query = await searchParams.catch(() => ({ month: undefined as string | undefined }));
   const monthKey = query.month && /^\d{4}-\d{2}$/.test(query.month) ? query.month : getMonthKey();

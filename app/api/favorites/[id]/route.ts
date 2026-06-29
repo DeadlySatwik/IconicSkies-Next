@@ -1,3 +1,4 @@
+import { emailVerificationRequiredResponse, isEmailVerified } from "@/lib/auth/email-verification";
 import { getCurrentUser } from "@/lib/auth/session";
 import {
   deleteFavoriteLocation,
@@ -12,6 +13,7 @@ export async function PATCH(
 ) {
   const user = await getCurrentUser();
   if (!user) return jsonError("Sign in to update a favorite location.", 401);
+  if (!isEmailVerified(user)) return emailVerificationRequiredResponse("Verify your email to update a favorite location.");
 
   const { id } = await params;
   const body = await request.json().catch(() => null);
@@ -37,6 +39,7 @@ export async function DELETE(
 ) {
   const user = await getCurrentUser();
   if (!user) return jsonError("Sign in to delete a favorite location.", 401);
+  if (!isEmailVerified(user)) return emailVerificationRequiredResponse("Verify your email to delete a favorite location.");
 
   const { id } = await params;
   const favorite = await getFavoriteLocation(user.id, id);

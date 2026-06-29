@@ -15,6 +15,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
   const [otpRequired, setOtpRequired] = useState(false);
   const [pendingEmail, setPendingEmail] = useState("");
   const [otpMessage, setOtpMessage] = useState("");
+  const [otpRedirectTo, setOtpRedirectTo] = useState("/dashboard");
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -43,7 +44,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
 
     const payload = (response.headers.get("content-type")?.includes("application/json")
       ? await response.json().catch(() => null)
-      : null) as { ok?: boolean; error?: string; otpRequired?: boolean; message?: string } | null;
+      : null) as { ok?: boolean; error?: string; otpRequired?: boolean; message?: string; redirectTo?: string } | null;
 
     if (!response.ok || !payload?.ok) {
       setError(payload?.error ?? "Authentication failed.");
@@ -55,26 +56,22 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
       setPendingEmail(body.email);
       setOtpRequired(true);
       setOtpMessage(payload.message ?? "Check your email for a verification code.");
+      setOtpRedirectTo(payload.redirectTo ?? "/dashboard");
       setLoading(false);
       return;
     }
 
-    if (mode === "register") {
-      router.push("/dashboard");
-      router.refresh();
-      return;
-    }
-
-    router.push("/dashboard");
+    router.push(payload.redirectTo ?? "/dashboard");
     router.refresh();
   }
 
-  function handleOtpVerified() {
+  function handleOtpVerified(redirectTo?: string) {
     setOtpRequired(false);
     setPendingEmail("");
     setError("");
     setOtpMessage("");
-    router.push("/dashboard");
+    setOtpRedirectTo("/dashboard");
+    router.push(redirectTo ?? otpRedirectTo);
     router.refresh();
   }
 

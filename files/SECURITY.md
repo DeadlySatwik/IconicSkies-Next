@@ -4,6 +4,11 @@
 
 IconicSkies uses password-based authentication with server-managed sessions. Password login remains the default path. Email OTP can be used for verification and, when enabled for a user, as a second step after a correct password.
 
+Email verification and per-login OTP are separate:
+
+- `email_verified_at` proves the inbox was verified once after registration
+- `otp_required=true` adds a second email code after password login for selected accounts
+
 ## Redis-Backed Email OTP
 
 Email OTP challenges are stored only in Redis. PostgreSQL does not store OTP codes.
@@ -25,12 +30,24 @@ Email OTP challenges are stored only in Redis. PostgreSQL does not store OTP cod
 
 SMS/mobile OTP is not a current production feature. Future SMS support should follow the same Redis-backed validation model and must not weaken the current email-first behavior.
 
+## Pre-OTP Email Authenticity Checks
+
+Registration does not send OTP blindly.
+
+- email syntax is validated and normalized first
+- reserved and obvious test domains such as `example.com`, `test.com`, `localhost`, and similar values are blocked
+- a small denylist blocks obvious disposable domains such as Mailinator and 10 Minute Mail
+- the server checks for MX records before sending OTP
+- if DNS lookup temporarily fails, registration is paused with a retry-safe message instead of sending OTP
+- an optional external validator can be configured, but it is disabled by default and should not block all registrations when unavailable unless strict mode is explicitly enabled
+
 ## Password and Session Security
 
 - Passwords are hashed server-side before storage
 - sessions use secure, server-controlled cookies
 - session records are scoped to the authenticated user
 - protected routes and private resources enforce ownership checks before returning data
+- protected app features require a verified email address before access is granted
 
 ## API Keys and Secrets
 
@@ -78,6 +95,18 @@ Redis is used only for derived or short-lived data:
 Redis is not the system of record for users, journal entries, sessions, or photos. PostgreSQL remains the durable source of truth.
 
 Rate limiting is used to reduce abuse on AI and auth-related routes. Cache keys and throttling keys should avoid raw emails, raw tokens, private object paths, and full GPS precision.
+
+## Verification Gate
+
+After registration, signed-in but unverified users are routed to a dedicated email verification flow before they can use protected features such as:
+
+- dashboard and journal surfaces
+- uploads and private photo access
+- favorites and Current Sky mutations
+- Sky Moment create and update routes
+- AI enhancement, title suggestions, and monthly recap
+
+Public weather lookup remains available without verification. City pages can still be viewed, but save actions are blocked until email verification is complete.
 
 ## AI Privacy Rules
 

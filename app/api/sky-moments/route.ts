@@ -1,3 +1,4 @@
+import { emailVerificationRequiredResponse, isEmailVerified } from "@/lib/auth/email-verification";
 import { getCurrentUser } from "@/lib/auth/session";
 import { skyMomentSchema, jsonError } from "@/lib/security/validation";
 import { createSkyMoment } from "@/lib/sky/service";
@@ -17,6 +18,7 @@ function normalizeCityName(value: string) {
 export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) return jsonError("Sign in to save a sky moment.", 401);
+  if (!isEmailVerified(user)) return emailVerificationRequiredResponse("Verify your email to save a sky moment.");
 
   const parsed = skyMomentSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return jsonError("Check the sky moment details.", 422);

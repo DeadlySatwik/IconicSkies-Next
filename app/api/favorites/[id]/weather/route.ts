@@ -1,3 +1,4 @@
+import { emailVerificationRequiredResponse, isEmailVerified } from "@/lib/auth/email-verification";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getFavoriteLocation } from "@/lib/favorites/service";
 import { jsonError } from "@/lib/security/validation";
@@ -10,6 +11,7 @@ export async function GET(
 ) {
   const user = await getCurrentUser();
   if (!user) return jsonError("Sign in to preview a favorite location.", 401);
+  if (!isEmailVerified(user)) return emailVerificationRequiredResponse("Verify your email to preview favorite locations.");
 
   const { id } = await params;
   const favorite = await getFavoriteLocation(user.id, id);

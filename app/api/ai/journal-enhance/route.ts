@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { emailVerificationRequiredResponse, isEmailVerified } from "@/lib/auth/email-verification";
 import { getCurrentUser } from "@/lib/auth/session";
 import { jsonError, unitsSchema } from "@/lib/security/validation";
 import {
@@ -108,6 +109,7 @@ function providerError(status: number) {
 export async function POST(request: Request) {
   const user = await getCurrentUser().catch(() => null);
   if (!user) return jsonError("Sign in to enhance a sky note.", 401);
+  if (!isEmailVerified(user)) return emailVerificationRequiredResponse("Verify your email to use AI journal tools.");
 
   const groqApiKey = process.env.GROQ_API_KEY;
   if (!groqApiKey) {

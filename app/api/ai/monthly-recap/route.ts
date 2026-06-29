@@ -1,3 +1,4 @@
+import { emailVerificationRequiredResponse, isEmailVerified } from "@/lib/auth/email-verification";
 import { getCurrentUser } from "@/lib/auth/session";
 import {
   buildMonthlyRecapPrompt,
@@ -70,6 +71,7 @@ function buildMonthlyRecapRepairPrompt(content: string) {
 export async function POST(request: Request) {
   const user = await getCurrentUser().catch(() => null);
   if (!user) return jsonError("Sign in to generate a monthly recap.", 401);
+  if (!isEmailVerified(user)) return emailVerificationRequiredResponse("Verify your email to generate a monthly recap.");
 
   const groqApiKey = process.env.GROQ_API_KEY;
   if (!groqApiKey) {

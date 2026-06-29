@@ -1,4 +1,5 @@
 import { and, eq } from "drizzle-orm";
+import { emailVerificationRequiredResponse, isEmailVerified } from "@/lib/auth/email-verification";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getDb } from "@/lib/db/client";
 import { skyPhotos } from "@/lib/db/schema";
@@ -11,6 +12,7 @@ export async function GET(
 ) {
   const user = await getCurrentUser();
   if (!user) return jsonError("Sign in to view this sky photo.", 401);
+  if (!isEmailVerified(user)) return emailVerificationRequiredResponse("Verify your email to view this sky photo.");
 
   const { id } = await params;
   const photo = await getDb().query.skyPhotos.findFirst({

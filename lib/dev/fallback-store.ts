@@ -83,7 +83,7 @@ const stateKey = Symbol.for("iconicskies.fallback-store");
 function getState(): FallbackState {
   const globalObject = globalThis as typeof globalThis & Record<symbol, FallbackState | undefined>;
   if (!globalObject[stateKey]) {
-    globalObject[stateKey] = {
+    const state: FallbackState = {
       usersById: new Map(),
       usersByEmail: new Map(),
       sessionsByTokenHash: new Map(),
@@ -93,6 +93,26 @@ function getState(): FallbackState {
       snapshotIdByKey: new Map(),
       momentsByUserId: new Map(),
     };
+
+    const now = new Date();
+    const demoUser: FallbackUser = {
+      id: "fallback-demo-user",
+      email: "demo@iconicskies.local",
+      emailNormalized: "demo@iconicskies.local",
+      emailVerifiedAt: now,
+      phoneNumber: null,
+      phoneVerifiedAt: null,
+      otpRequired: false,
+      name: "Demo Sky Keeper",
+      passwordHash: "$argon2id$v=19$m=19456,t=2,p=1$zVzdbiX5zdOeTs/E6xCLfQ$/Pi6vr5ChJl6Hvlxvb71QxbuYZvG5U9e6L8uDPdbWvY",
+      role: "user",
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    state.usersById.set(demoUser.id, demoUser);
+    state.usersByEmail.set(demoUser.emailNormalized, demoUser.id);
+    globalObject[stateKey] = state;
   }
 
   return globalObject[stateKey];
@@ -163,6 +183,24 @@ export function updateFallbackUserById(
   getState().usersById.set(userId, next);
   getState().usersByEmail.set(next.emailNormalized, userId);
   return next;
+}
+
+export function deleteFallbackUserById(userId: string) {
+  const state = getState();
+  const user = state.usersById.get(userId);
+  if (!user) return false;
+
+  state.usersById.delete(userId);
+  state.usersByEmail.delete(user.emailNormalized);
+  state.momentsByUserId.delete(userId);
+
+  for (const [tokenHash, session] of state.sessionsByTokenHash.entries()) {
+    if (session.userId === userId) {
+      state.sessionsByTokenHash.delete(tokenHash);
+    }
+  }
+
+  return true;
 }
 
 export function createFallbackSession(userId: string) {

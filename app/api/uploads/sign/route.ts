@@ -1,3 +1,4 @@
+import { emailVerificationRequiredResponse, isEmailVerified } from "@/lib/auth/email-verification";
 import { getCurrentUser } from "@/lib/auth/session";
 import { jsonError, uploadSignSchema } from "@/lib/security/validation";
 import { signUpload } from "@/lib/gcs/service";
@@ -5,6 +6,7 @@ import { signUpload } from "@/lib/gcs/service";
 export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) return jsonError("Sign in to upload a sky photo.", 401);
+  if (!isEmailVerified(user)) return emailVerificationRequiredResponse("Verify your email to upload a sky photo.");
 
   const parsed = uploadSignSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return jsonError("Upload must be a JPG, PNG, WebP, or GIF under 8 MB.", 422);

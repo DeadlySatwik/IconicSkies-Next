@@ -25,6 +25,9 @@ export default async function SettingsPage() {
               <p className="mt-3 max-w-2xl text-sm leading-6 text-cloud/82">
                 Manage email verification and sign-in protection for your IconicSkies account.
               </p>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-cloud/68">
+                Email verification is required once after registration. OTP sign-in after every login is separate and only enabled for selected accounts.
+              </p>
             </div>
             <div className="rounded-xl border border-white/12 bg-white/6 px-4 py-3">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cloud/56">Email</p>
@@ -41,7 +44,7 @@ export default async function SettingsPage() {
                   Email verification
                 </p>
                 <p className="mt-3 text-sm leading-6 text-cloud/82">
-                  Keep your inbox verified so recovery, account alerts, and verification codes stay reliable.
+                  Verify your inbox once so saved skies, uploads, and journal tools stay available to your account.
                 </p>
               </div>
               <span className="rounded-full border border-white/14 bg-white/8 px-3 py-1 text-xs font-semibold text-cloud/84">

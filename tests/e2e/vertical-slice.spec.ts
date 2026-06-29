@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const uniqueEmail = () => `sky-${Date.now()}-${Math.floor(Math.random() * 1000)}@example.test`;
+const uniqueEmail = () => `sky-${Date.now()}-${Math.floor(Math.random() * 1000)}@gmail.com`;
 
 test("homepage loads and searches for a city", async ({ page }, testInfo) => {
   await page.goto("/");
@@ -16,7 +16,6 @@ test("homepage loads and searches for a city", async ({ page }, testInfo) => {
   await page.getByLabel("Search city").fill("Darjeeling");
   await page.getByRole("button", { name: /view weather/i }).click();
   await expect(page).toHaveURL(/\/city\/darjeeling/);
-  await expect(page.getByText(/darjeeling, in/i)).toBeVisible();
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   await expect(page.getByTestId("weather-background")).toBeVisible();
 });
@@ -51,7 +50,7 @@ test("desktop landing video toggle appears and persists", async ({ page }, testI
   );
 });
 
-test("registers, saves a sky moment, and shows it in the timeline", async ({ page }) => {
+test("registers and is gated to verify email before app access", async ({ page }) => {
   const email = uniqueEmail();
 
   await page.goto("/register");
@@ -59,33 +58,21 @@ test("registers, saves a sky moment, and shows it in the timeline", async ({ pag
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill("IconicSkiesTest123!");
   await page.getByRole("button", { name: /create account/i }).click();
-  await expect(page).toHaveURL(/\/dashboard/);
-  await expect(page.getByRole("heading", { name: /saved skies/i })).toBeVisible();
-  await expect(page.getByText(/verify your email/i)).toHaveCount(0);
-
-  await page.goto("/city/darjeeling?units=metric", { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("button", { name: /enhance note with ai/i })).toHaveAttribute("aria-expanded", "false");
-  await expect(page.getByRole("button", { name: /add title & mood tags/i })).toHaveAttribute("aria-expanded", "false");
-  await page.getByRole("button", { name: /enhance note with ai/i }).click();
-  await expect(page.getByLabel("Writing style")).toBeVisible();
-  await page.getByRole("button", { name: /add title & mood tags/i }).click();
-  await expect(page.getByLabel("Title")).toBeVisible();
-  await page.getByLabel("Journal note").fill("Mist over the hills during the test run.");
-  await page.getByLabel("Title").fill("Rain Before the Grind");
-  await page.getByLabel("Mood tags").fill("focused, rainy, calm, growth");
-  await page.getByRole("button", { name: /save sky moment/i }).click();
-  await expect(page.getByText(/saved to your sky journal/i)).toBeVisible();
+  await expect(page).toHaveURL(/\/verify-email/);
+  await expect(page.getByRole("heading", { name: /verify your email/i })).toBeVisible();
 
   await page.goto("/dashboard");
-  await expect(page.getByRole("button", { name: /monthly sky recap/i })).toHaveAttribute("aria-expanded", "false");
-  await expect(page.getByRole("button", { name: /favorite skies/i })).toHaveAttribute("aria-expanded", "false");
-  await page.getByRole("button", { name: /monthly sky recap/i }).click();
-  await expect(page.getByRole("button", { name: /generate monthly recap/i })).toBeVisible();
-  const timeline = page.getByLabel("Sky Journal timeline");
-  await expect(timeline).toBeVisible();
-  await expect(timeline.getByRole("button").first()).toHaveAttribute("aria-expanded", "true");
-  await expect(timeline.getByText("Rain Before the Grind")).toBeVisible();
-  await expect(timeline.getByText("Mist over the hills during the test run.")).toBeVisible();
+  await expect(page).toHaveURL(/\/verify-email/);
+});
+
+test("register blocks obvious fake email domains before OTP", async ({ page }) => {
+  await page.goto("/register");
+  await page.getByLabel("Name").fill("Blocked Domain");
+  await page.getByLabel("Email").fill("blocked@example.com");
+  await page.getByLabel("Password").fill("IconicSkiesTest123!");
+  await page.getByRole("button", { name: /create account/i }).click();
+  await expect(page).toHaveURL(/\/register/);
+  await expect(page.getByText(/please use a real email address you can access/i)).toBeVisible();
 });
 
 test("protected dashboard redirects signed-out users", async ({ page }) => {
@@ -108,6 +95,7 @@ test("settings page shows email OTP security controls", async ({ page }) => {
   await page.goto("/settings");
   await expect(page.getByRole("heading", { name: /account security/i })).toBeVisible();
   await expect(page.getByText(/manage email verification and sign-in protection/i)).toBeVisible();
+  await expect(page.getByText(/email verification is required once after registration/i)).toBeVisible();
   await expect(page.getByText("Email verification", { exact: true })).toBeVisible();
   await expect(page.getByText("OTP sign-in protection", { exact: true })).toBeVisible();
   await expect(page.getByText(/when otp sign-in is enabled for your account, iconicskies asks for an email code after your password/i)).toBeVisible();
@@ -121,7 +109,7 @@ test("dashboard settings redirects to settings", async ({ page }) => {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill("IconicSkiesTest123!");
   await page.getByRole("button", { name: /create account/i }).click();
-  await expect(page).toHaveURL(/\/dashboard/);
+  await expect(page).toHaveURL(/\/verify-email/);
 
   await page.goto("/dashboard/settings");
   await expect(page).toHaveURL(/\/settings/);

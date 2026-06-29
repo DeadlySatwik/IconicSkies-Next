@@ -1,4 +1,5 @@
 import { and, eq } from "drizzle-orm";
+import { emailVerificationRequiredResponse, isEmailVerified } from "@/lib/auth/email-verification";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getDb } from "@/lib/db/client";
 import { skyMoments } from "@/lib/db/schema";
@@ -10,6 +11,7 @@ export async function PATCH(
 ) {
   const user = await getCurrentUser();
   if (!user) return jsonError("Sign in to update a sky moment.", 401);
+  if (!isEmailVerified(user)) return emailVerificationRequiredResponse("Verify your email to update a sky moment.");
 
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as { note?: unknown } | null;

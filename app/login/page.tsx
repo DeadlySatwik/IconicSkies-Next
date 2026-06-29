@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { AuthForm } from "@/components/auth/auth-form";
 import { AtmosphericPageShell } from "@/components/layout/atmospheric-page-shell";
+import { getPostAuthRedirectPath } from "@/lib/auth/email-verification";
 import { getCurrentUser } from "@/lib/auth/session";
 
 export const metadata = {
@@ -9,7 +10,7 @@ export const metadata = {
 
 export default async function LoginPage() {
   const user = await getCurrentUser().catch(() => null);
-  if (user) redirect("/dashboard");
+  if (user) redirect(getPostAuthRedirectPath(user));
 
   return (
     <main>

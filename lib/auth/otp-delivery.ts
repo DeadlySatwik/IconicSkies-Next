@@ -20,22 +20,22 @@ export async function deliverOtpCode(input: {
   purpose: "register" | "login" | "verify-contact";
 }): Promise<OtpDeliveryOutcome> {
   if (input.channel === "email") {
+    if (isDev() && shouldLogOtpCodes()) {
+      console.info("[otp] dev email code", {
+        purpose: input.purpose,
+        identifier: maskIdentifier(input.identifier),
+        code: input.code,
+        ttlSeconds: getOtpTtlSeconds(),
+      });
+      return { ok: true, delivered: false, provider: "email" as const, reason: "dev-logged" as const };
+    }
+
     const emailResult = await sendEmailOtp({ to: input.identifier, code: input.code, purpose: input.purpose });
     if (emailResult.ok && emailResult.delivered) {
       return { ok: true, delivered: true, provider: "email" as const };
     }
 
     if (emailResult.ok && !emailResult.delivered && emailResult.reason === "not-configured") {
-      if (isDev() && shouldLogOtpCodes()) {
-        console.info("[otp] dev email code", {
-          purpose: input.purpose,
-          identifier: maskIdentifier(input.identifier),
-          code: input.code,
-          ttlSeconds: getOtpTtlSeconds(),
-        });
-        return { ok: true, delivered: false, provider: "email" as const, reason: "dev-logged" as const };
-      }
-
       if (isDev()) {
         console.warn("[otp] email delivery skipped because RESEND_API_KEY / EMAIL_FROM is missing", {
           purpose: input.purpose,

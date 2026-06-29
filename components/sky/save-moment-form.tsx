@@ -63,6 +63,7 @@ export function SaveMomentForm({
   weatherSnapshotId,
   gcsEnabled,
   signedIn,
+  emailVerified = true,
   aiEnabled,
   cityName,
   cityCountry = null,
@@ -74,12 +75,14 @@ export function SaveMomentForm({
   units,
   capturedAt,
   favoriteLabel = null,
+  verifyEmailHref = "/verify-email?next=/dashboard",
   variant = "default",
 }: {
   cityId: string;
   weatherSnapshotId: string;
   gcsEnabled: boolean;
   signedIn: boolean;
+  emailVerified?: boolean;
   aiEnabled?: boolean;
   cityName: string;
   cityCountry?: string | null;
@@ -91,6 +94,7 @@ export function SaveMomentForm({
   units: "metric" | "imperial";
   capturedAt: string;
   favoriteLabel?: string | null;
+  verifyEmailHref?: string;
   variant?: "default" | "cinematic";
 }) {
   const [note, setNote] = useState("");
@@ -548,6 +552,35 @@ export function SaveMomentForm({
           </Link>
           <Link className={cinematic ? "rounded-xl border border-skyInk/20 px-4 py-2 font-semibold hover:bg-white/65" : "rounded-lg border border-skyInk/20 px-4 py-2 font-semibold"} href="/register">
             Create account
+          </Link>
+        </div>
+      </section>
+    );
+  }
+
+  if (!emailVerified) {
+    return (
+      <section className={sectionClass}>
+        <div className="flex items-start gap-3">
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-horizon text-skyInk">
+            <Save aria-hidden className="size-5" />
+          </span>
+          <div>
+            <h2 className="text-2xl font-semibold text-skyInk">Save this sky moment</h2>
+            <p className="mt-1 text-skyInk/70">
+              Verify your email to save Sky Moments, upload photos, and keep your journal timeline unlocked.
+            </p>
+          </div>
+        </div>
+        <div className="mt-5 flex flex-wrap gap-3">
+          <Link className={primaryButtonClass} href={verifyEmailHref}>
+            Verify your email
+          </Link>
+          <Link
+            className={cinematic ? "rounded-xl border border-skyInk/20 px-4 py-2 font-semibold hover:bg-white/65" : "rounded-lg border border-skyInk/20 px-4 py-2 font-semibold"}
+            href="/settings"
+          >
+            Account Security
           </Link>
         </div>
       </section>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { buildVerifyEmailHref, isEmailVerified } from "@/lib/auth/email-verification";
 import { getCurrentUser } from "@/lib/auth/session";
 
 export const metadata = {
@@ -9,6 +10,7 @@ export const metadata = {
 export default async function GalleryPage() {
   const user = await getCurrentUser().catch(() => null);
   if (!user) redirect("/login");
+  if (!isEmailVerified(user)) redirect(buildVerifyEmailHref("/gallery"));
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6">

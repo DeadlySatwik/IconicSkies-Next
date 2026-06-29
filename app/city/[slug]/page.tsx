@@ -8,6 +8,7 @@ import { SaveMomentForm } from "@/components/sky/save-moment-form";
 import { SearchPanel } from "@/components/weather/search-panel";
 import { WeatherBackground } from "@/components/weather/weather-background";
 import { WeatherCard } from "@/components/weather/weather-card";
+import { buildVerifyEmailHref, isEmailVerified } from "@/lib/auth/email-verification";
 import { getCurrentUser } from "@/lib/auth/session";
 import { listFavoriteLocationsForCity } from "@/lib/favorites/service";
 import { isGcsConfigured } from "@/lib/gcs/service";
@@ -90,6 +91,7 @@ export default async function CityPage({
 
   const backgroundMood = resolveWeatherBackgroundMood(weather);
   const weatherIcon = weatherAssetForIcon(weather.snapshot.iconCode, weather.snapshot.condition);
+  const emailVerified = isEmailVerified(user);
   const capturedAt = new Intl.DateTimeFormat("en", {
     weekday: "short",
     month: "short",
@@ -172,6 +174,7 @@ export default async function CityPage({
             weatherSnapshotId={weather.snapshot.id}
             gcsEnabled={isGcsConfigured()}
             signedIn={Boolean(user)}
+            emailVerified={emailVerified}
             aiEnabled={Boolean(process.env.GROQ_API_KEY)}
             cityName={weather.city.name}
             cityCountry={weather.city.country}
@@ -182,6 +185,7 @@ export default async function CityPage({
             temperature={weather.snapshot.temperature}
             units={weather.snapshot.units}
             capturedAt={weather.snapshot.capturedAt}
+            verifyEmailHref={buildVerifyEmailHref(`/city/${slug}?units=${units}`)}
             variant="cinematic"
           />
         </div>

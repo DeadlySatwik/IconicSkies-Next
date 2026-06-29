@@ -17,10 +17,11 @@ IconicSkies is a weather app that treats weather as memory, not just data. The p
 ## Core User Flows
 
 1. Search for a city and view the current weather.
-2. Save the moment with a note, title, mood tags, and an optional sky photo.
-3. Revisit the dashboard to see Current Sky, favorite locations, and the Sky Journal timeline.
-4. Generate AI assistance only when desired: polish a note, suggest a title and tags, or create a monthly recap.
-5. Save a past moment from the last 14 days by choosing the captured time and captured city, then attach the correct historical weather snapshot.
+2. Create an account, then verify the email address once before protected features are unlocked.
+3. Save the moment with a note, title, mood tags, and an optional sky photo.
+4. Revisit the dashboard to see Current Sky, favorite locations, and the Sky Journal timeline.
+5. Generate AI assistance only when desired: polish a note, suggest a title and tags, or create a monthly recap.
+6. Save a past moment from the last 14 days by choosing the captured time and captured city, then attach the correct historical weather snapshot.
 
 ## Key Features
 
@@ -30,6 +31,7 @@ IconicSkies is a weather app that treats weather as memory, not just data. The p
 - Current Sky preview from explicit location permission
 - Monthly Sky Recap generated on demand
 - Redis-backed email OTP verification and optional email OTP sign-in protection
+- One-time email verification gate after registration, with pre-OTP authenticity checks
 
 ## Sky Journal Behavior
 
@@ -79,9 +81,19 @@ Saved moments can show either:
 
 This is a presentation preference for each moment surface, not a change to the saved data.
 
+## Email Verification Behavior
+
+Email verification and OTP sign-in are separate product behaviors.
+
+- New accounts must verify email once before protected features can be used
+- Registration rejects clearly fake, reserved, disposable, or non-MX email domains before OTP is sent
+- After verification, normal password login remains password-only unless `otp_required=true`
+- OTP on every login is still a separate account security control, not the default for everyone
+
 ## Current Limitations
 
 - Email OTP is implemented; SMS OTP is not a current product feature
+- Local authenticity checks reduce obviously fake registrations, but they do not guarantee every valid-looking inbox belongs to a real person until OTP is completed
 - Historical weather depends on provider availability for backdated capture
 - AI features depend on Groq configuration and are intentionally on-demand
 - Local development can run in mock/demo modes for some external services

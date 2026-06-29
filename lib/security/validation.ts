@@ -100,6 +100,6 @@ export const geoWeatherPreviewSchema = z.object({
   units: unitsSchema.optional().default("metric"),
 });
 
-export function jsonError(message: string, status = 400) {
-  return Response.json({ ok: false, error: message }, { status });
+export function jsonError(message: string, status = 400, code?: string) {
+  return Response.json({ ok: false, error: message, ...(code ? { code } : {}) }, { status });
 }
