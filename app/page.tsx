@@ -27,18 +27,18 @@ export default async function HomePage() {
   })[0] ?? null;
 
   return (
-    <main className="bg-[#050c12] text-cloud">
+    <main className="overflow-x-clip bg-[#050c12] text-cloud">
       <section className="relative isolate min-h-[calc(100vh-65px)] overflow-hidden">
         <div className="mx-auto grid min-h-[calc(100vh-65px)] max-w-6xl items-center gap-12 px-4 py-12 sm:px-6 lg:grid-cols-[1.16fr_0.84fr] lg:items-start lg:py-16">
-          <div className="max-w-3xl">
+          <div className="min-w-0 max-w-3xl">
             <div className="mb-8">
               <LandingBackground />
             </div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/14 bg-white/8 px-3 py-1 text-sm font-semibold text-aurora backdrop-blur-xl">
+            <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-white/14 bg-white/8 px-3 py-1 text-sm font-semibold text-aurora backdrop-blur-xl">
               <CloudSun aria-hidden className="size-4" />
-              Sky Journal weather, built around memory
+              <span className="truncate sm:text-wrap">Sky Journal weather, built around memory</span>
             </div>
-            <h1 className="mt-7 max-w-3xl text-5xl font-semibold leading-[0.98] tracking-normal text-cloud sm:text-6xl lg:text-7xl">
+            <h1 className="mt-7 max-w-3xl text-4xl font-semibold leading-[1] tracking-normal text-cloud text-wrap-balance sm:text-6xl lg:text-7xl">
               Remember the sky, not just the weather.
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-cloud/78">
@@ -62,8 +62,8 @@ export default async function HomePage() {
               </span>
             </div>
           </div>
-          <div className="relative lg:ml-auto lg:mt-8 lg:max-w-[31rem]">
-            <div className="absolute -inset-8 -z-10 rounded-[2rem] bg-[radial-gradient(circle_at_50%_20%,rgba(216,138,75,0.16),transparent_20rem)]" />
+          <div className="relative min-w-0 max-w-full lg:ml-auto lg:mt-8 lg:max-w-[31rem]">
+            <div className="absolute inset-0 -z-10 rounded-[1.75rem] bg-[radial-gradient(circle_at_50%_20%,rgba(216,138,75,0.16),transparent_20rem)] blur-2xl sm:-inset-4 lg:-inset-8 lg:rounded-[2rem]" />
             <LandingPreview moment={latestMoment} signedIn={Boolean(user)} />
           </div>
         </div>
