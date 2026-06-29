@@ -61,6 +61,7 @@ test("registers, saves a sky moment, and shows it in the timeline", async ({ pag
   await page.getByRole("button", { name: /create account/i }).click();
   await expect(page).toHaveURL(/\/dashboard/);
   await expect(page.getByRole("heading", { name: /saved skies/i })).toBeVisible();
+  await expect(page.getByText(/verify your email/i)).toHaveCount(0);
 
   await page.goto("/city/darjeeling?units=metric", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("button", { name: /enhance note with ai/i })).toHaveAttribute("aria-expanded", "false");

@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { CurrentLocationCard } from "@/components/favorites/current-location-card";
 import { FavoriteLocationsGrid } from "@/components/favorites/favorite-locations-grid";
 import { AtmosphericPageShell } from "@/components/layout/atmospheric-page-shell";
-import { OtpVerificationBanner } from "@/components/auth/otp-verification-banner";
 import { MonthlySkyRecap } from "@/components/sky/monthly-sky-recap";
 import { SkyTimeline } from "@/components/sky/timeline";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -22,14 +21,13 @@ export const metadata = {
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string; verify?: string }>;
+  searchParams: Promise<{ month?: string }>;
 }) {
   const user = await getCurrentUser().catch(() => null);
   if (!user) redirect("/login");
 
-  const query = await searchParams.catch(() => ({ month: undefined as string | undefined, verify: undefined as string | undefined }));
+  const query = await searchParams.catch(() => ({ month: undefined as string | undefined }));
   const monthKey = query.month && /^\d{4}-\d{2}$/.test(query.month) ? query.month : getMonthKey();
-  const shouldShowEmailVerification = query.verify === "email" && !user.emailVerifiedAt;
 
   const [moments, units, favoriteLocations] = await Promise.all([
     listSkyMoments(user.id).catch(() => []),
@@ -60,18 +58,6 @@ export default async function DashboardPage({
             </Link>
           </div>
         </section>
-        {shouldShowEmailVerification ? (
-          <div className="mb-6">
-            <OtpVerificationBanner
-              purpose="verify-contact"
-              channel="email"
-              identifier={user.email}
-              title="Verify your email"
-              description="Enter the code we sent to finish verifying your account."
-              compact
-            />
-          </div>
-        ) : null}
         <div className="space-y-6">
           <CurrentLocationCard units={units} />
           <MonthlySkyRecap summary={monthlySummary} />

@@ -60,7 +60,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
     }
 
     if (mode === "register") {
-      router.push("/dashboard?verify=email");
+      router.push("/dashboard");
       router.refresh();
       return;
     }
