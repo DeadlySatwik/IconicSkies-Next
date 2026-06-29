@@ -21,6 +21,7 @@ type SkyMomentVisualProps = {
   storageScope?: string;
   moodImageSrc: string | null;
   photoSrc: string | null;
+  variant?: "default" | "timeline";
   moodAlt?: string;
   photoAlt?: string;
   className?: string;
@@ -38,6 +39,7 @@ export function SkyMomentVisual({
   storageScope,
   moodImageSrc,
   photoSrc,
+  variant = "default",
   moodAlt = "Weather mood background",
   photoAlt = "Captured sky photo",
   className = "",
@@ -57,10 +59,37 @@ export function SkyMomentVisual({
   const primarySrc = activeMode === "photo" ? photoSrc ?? moodImageSrc : moodImageSrc ?? photoSrc;
   const secondarySrc = activeMode === "photo" ? moodImageSrc : photoSrc;
   const secondaryBadge = activeMode === "photo" ? moodBadge : photoBadge;
+  const showSecondaryAccent = canSwap && Boolean(secondarySrc) && (variant !== "timeline" || activeMode === "mood");
+  const resolvedOverlayClassName =
+    variant === "timeline"
+      ? `${overlayClassName} opacity-70`
+      : overlayClassName;
   const surfaceOverlayClassName =
-    activeMode === "photo"
-      ? "absolute inset-0 bg-[linear-gradient(180deg,rgba(5,12,18,0.02)_0%,rgba(5,12,18,0.12)_38%,rgba(5,12,18,0.54)_100%)]"
-      : "absolute inset-0 bg-[linear-gradient(180deg,rgba(5,12,18,0.08)_0%,rgba(5,12,18,0.26)_42%,rgba(5,12,18,0.86)_100%)]";
+    variant === "timeline"
+      ? activeMode === "photo"
+        ? "absolute inset-0 bg-[linear-gradient(180deg,rgba(5,12,18,0.01)_0%,rgba(5,12,18,0.08)_38%,rgba(5,12,18,0.36)_100%)]"
+        : "absolute inset-0 bg-[linear-gradient(180deg,rgba(5,12,18,0.03)_0%,rgba(5,12,18,0.14)_42%,rgba(5,12,18,0.62)_100%)]"
+      : activeMode === "photo"
+        ? "absolute inset-0 bg-[linear-gradient(180deg,rgba(5,12,18,0.02)_0%,rgba(5,12,18,0.12)_38%,rgba(5,12,18,0.54)_100%)]"
+        : "absolute inset-0 bg-[linear-gradient(180deg,rgba(5,12,18,0.08)_0%,rgba(5,12,18,0.26)_42%,rgba(5,12,18,0.86)_100%)]";
+  const resolvedToggleClassName =
+    variant === "timeline" ? "absolute right-2.5 top-2.5 z-30" : toggleClassName;
+  const secondaryContainerClassName =
+    variant === "timeline"
+      ? "absolute bottom-2.5 right-2.5 z-30 flex flex-col items-end gap-1.5"
+      : "absolute bottom-3 right-3 z-30 flex flex-col items-end gap-1.5";
+  const secondaryFrameClassName =
+    variant === "timeline"
+      ? "overflow-hidden rounded-[1rem] border border-white/16 bg-black/32 shadow-[0_12px_28px_rgba(0,0,0,0.24)] backdrop-blur-md"
+      : "overflow-hidden rounded-[1rem] border border-white/16 bg-black/30 shadow-[0_14px_34px_rgba(0,0,0,0.26)] backdrop-blur-md";
+  const secondaryInnerClassName =
+    variant === "timeline"
+      ? "relative aspect-[4/5] w-[5.75rem] sm:w-[6.25rem]"
+      : "relative aspect-[4/5] w-[5.75rem] sm:w-[6.5rem]";
+  const secondaryBadgeClassName =
+    variant === "timeline"
+      ? "rounded-full border border-white/14 bg-black/34 px-2.5 py-1 text-[0.65rem] font-semibold text-cloud/86 backdrop-blur-md"
+      : "rounded-full border border-white/14 bg-black/28 px-2.5 py-1 text-[0.65rem] font-semibold text-cloud/82 backdrop-blur-md";
 
   const toggleButtons = useMemo(() => {
     if (!showToggle || !canSwap) return null;
@@ -70,7 +99,9 @@ export function SkyMomentVisual({
         type="button"
         aria-label={activeMode === "mood" ? "Switch to photo view" : "Switch to mood view"}
         aria-pressed={activeMode === "photo"}
-        className="group inline-flex h-7 items-center gap-1.5 rounded-full border border-white/16 bg-black/28 px-2 text-[0.68rem] font-semibold text-cloud/88 shadow-[0_8px_22px_rgba(0,0,0,0.24)] backdrop-blur-xl transition hover:bg-black/40 hover:text-cloud focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 sm:text-xs"
+        className={`group inline-flex items-center gap-1.5 rounded-full border border-white/16 bg-black/28 text-[0.68rem] font-semibold text-cloud/88 shadow-[0_8px_22px_rgba(0,0,0,0.24)] backdrop-blur-xl transition hover:bg-black/40 hover:text-cloud focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 sm:text-xs ${
+          variant === "timeline" ? "h-6.5 px-1.5" : "h-7 px-2"
+        }`}
         title={activeMode === "mood" ? "Switch to photo view" : "Switch to mood view"}
         onClick={() => {
           if (typeof window === "undefined") return;
@@ -94,7 +125,7 @@ export function SkyMomentVisual({
         </span>
       </button>
     );
-  }, [activeMode, canSwap, showToggle, storageScope]);
+  }, [activeMode, canSwap, showToggle, storageScope, variant]);
 
   if (!primarySrc) return null;
 
@@ -109,28 +140,28 @@ export function SkyMomentVisual({
         src={primarySrc}
         unoptimized={activeMode === "photo"}
       />
-      <div className={`absolute inset-0 ${overlayClassName}`} />
+      <div className={`absolute inset-0 ${resolvedOverlayClassName}`} />
       <div className={surfaceOverlayClassName} />
 
       {children ? <div className={childrenClassName}>{children}</div> : null}
 
-      {toggleButtons ? <div className={toggleClassName}>{toggleButtons}</div> : null}
+      {toggleButtons ? <div className={resolvedToggleClassName}>{toggleButtons}</div> : null}
 
-      {canSwap && secondarySrc ? (
-        <div className="absolute bottom-3 right-3 z-30 flex flex-col items-end gap-1.5">
-          <div className="overflow-hidden rounded-[1rem] border border-white/16 bg-black/30 shadow-[0_14px_34px_rgba(0,0,0,0.26)] backdrop-blur-md">
-            <div className="relative aspect-[4/5] w-[5.75rem] sm:w-[6.5rem]">
+      {showSecondaryAccent && secondarySrc ? (
+        <div className={secondaryContainerClassName}>
+          <div className={secondaryFrameClassName}>
+            <div className={secondaryInnerClassName}>
               <Image
                 alt={activeMode === "photo" ? moodAlt : photoAlt}
                 className="object-cover"
                 fill
-                sizes="(min-width: 640px) 104px, 92px"
+                sizes={variant === "timeline" ? "(min-width: 640px) 100px, 92px" : "(min-width: 640px) 104px, 92px"}
                 src={secondarySrc}
                 unoptimized={activeMode === "mood"}
               />
             </div>
           </div>
-          <span className="rounded-full border border-white/14 bg-black/28 px-2.5 py-1 text-[0.65rem] font-semibold text-cloud/82 backdrop-blur-md">
+          <span className={secondaryBadgeClassName}>
             {secondaryBadge}
           </span>
         </div>

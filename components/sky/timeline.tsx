@@ -73,15 +73,11 @@ function renderMomentCard(moment: Moment) {
 
   return (
     <article
-      className={
-        hasPhoto
-          ? "grid gap-4 rounded-2xl border border-white/14 bg-[#09171c]/88 p-4 text-cloud shadow-[0_18px_44px_rgba(0,0,0,0.28)] backdrop-blur-xl md:grid-cols-[minmax(180px,240px)_1fr]"
-          : "rounded-2xl border border-white/14 bg-[#09171c]/88 p-4 text-cloud shadow-[0_18px_44px_rgba(0,0,0,0.28)] backdrop-blur-xl"
-      }
+      className="grid gap-4 rounded-2xl border border-white/14 bg-[#09171c]/88 p-4 text-cloud shadow-[0_18px_44px_rgba(0,0,0,0.28)] backdrop-blur-xl md:grid-cols-[17.5rem_minmax(0,1fr)]"
       key={moment.id}
     >
       <SkyMomentVisual
-        className="relative aspect-[4/3] min-h-40 overflow-hidden rounded-xl bg-[#071417] md:aspect-auto md:h-full"
+        className="relative w-full overflow-hidden rounded-xl bg-[#071417] aspect-[16/11] min-h-[14.75rem] md:h-[15.75rem] md:aspect-auto"
         moodAlt={`${moment.cityName} weather mood`}
         moodBadge="Mood"
         moodImageSrc={weatherBackground.image}
@@ -89,10 +85,11 @@ function renderMomentCard(moment: Moment) {
         photoAlt={`${moment.cityName} sky photo`}
         photoBadge="Photo"
         photoSrc={photoSrc}
-        showToggle={hasPhoto}
+        showToggle={Boolean(photoSrc && weatherBackground.image)}
         storageScope={moment.id}
+        variant="timeline"
       />
-      <div className="flex flex-col justify-between gap-5">
+      <div className="flex min-w-0 flex-col justify-between gap-5">
         <div>
           <div className="flex flex-wrap items-center gap-3 text-sm text-cloud/76">
             <span className="inline-flex items-center gap-1.5">
