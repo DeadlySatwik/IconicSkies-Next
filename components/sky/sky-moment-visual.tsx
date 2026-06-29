@@ -1,21 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState, type ReactNode } from "react";
-
-type SkyMomentVisualMode = "mood" | "photo";
-
-function getStorageKey(storageScope?: string) {
-  return storageScope ? `skyMomentVisualMode:${storageScope}` : null;
-}
-
-function getStoredMode(storageScope?: string): SkyMomentVisualMode {
-  if (typeof window === "undefined") return "mood";
-  const storageKey = getStorageKey(storageScope);
-  if (!storageKey) return "mood";
-  const stored = window.localStorage.getItem(storageKey);
-  return stored === "photo" ? "photo" : "mood";
-}
+import { useMemo, type ReactNode } from "react";
+import {
+  useSkyMomentVisualMode,
+  writeStoredSkyMomentVisualMode,
+} from "@/lib/sky/moment-visual-client";
 
 type SkyMomentVisualProps = {
   storageScope?: string;
@@ -53,13 +43,13 @@ export function SkyMomentVisual({
   photoBadge = "Photo",
 }: SkyMomentVisualProps) {
   const canSwap = Boolean(moodImageSrc && photoSrc);
-  const [mode, setMode] = useState<SkyMomentVisualMode>(() => getStoredMode(storageScope));
+  const [mode] = useSkyMomentVisualMode(storageScope);
 
   const activeMode = canSwap ? mode : moodImageSrc ? "mood" : "photo";
   const primarySrc = activeMode === "photo" ? photoSrc ?? moodImageSrc : moodImageSrc ?? photoSrc;
   const secondarySrc = activeMode === "photo" ? moodImageSrc : photoSrc;
   const secondaryBadge = activeMode === "photo" ? moodBadge : photoBadge;
-  const showSecondaryAccent = canSwap && Boolean(secondarySrc) && (variant !== "timeline" || activeMode === "mood");
+  const showSecondaryAccent = canSwap && activeMode === "mood" && Boolean(secondarySrc);
   const resolvedOverlayClassName =
     variant === "timeline"
       ? `${overlayClassName} opacity-70`
@@ -104,11 +94,8 @@ export function SkyMomentVisual({
         }`}
         title={activeMode === "mood" ? "Switch to photo view" : "Switch to mood view"}
         onClick={() => {
-          if (typeof window === "undefined") return;
           const nextMode = activeMode === "mood" ? "photo" : "mood";
-          setMode(nextMode);
-          const storageKey = getStorageKey(storageScope);
-          if (storageKey) window.localStorage.setItem(storageKey, nextMode);
+          writeStoredSkyMomentVisualMode(storageScope, nextMode);
         }}
       >
         <span aria-hidden className="flex items-center gap-1">
@@ -152,12 +139,12 @@ export function SkyMomentVisual({
           <div className={secondaryFrameClassName}>
             <div className={secondaryInnerClassName}>
               <Image
-                alt={activeMode === "photo" ? moodAlt : photoAlt}
+                alt={photoAlt}
                 className="object-cover"
                 fill
                 sizes={variant === "timeline" ? "(min-width: 640px) 100px, 92px" : "(min-width: 640px) 104px, 92px"}
                 src={secondarySrc}
-                unoptimized={activeMode === "mood"}
+                unoptimized
               />
             </div>
           </div>

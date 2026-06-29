@@ -3,20 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Clock3, CloudSun, MapPin } from "lucide-react";
-import { useState } from "react";
+import { useSkyMomentVisualMode, writeStoredSkyMomentVisualMode } from "@/lib/sky/moment-visual-client";
 import { formatTemperature } from "@/lib/utils";
-
-type SkyMomentVisualMode = "mood" | "photo";
-
-function getStorageKey(storageScope: string) {
-  return `skyMomentVisualMode:${storageScope}`;
-}
-
-function getStoredMode(storageScope: string): SkyMomentVisualMode {
-  if (typeof window === "undefined") return "mood";
-  const stored = window.localStorage.getItem(getStorageKey(storageScope));
-  return stored === "photo" ? "photo" : "mood";
-}
 
 type LandingSkyMomentCardProps = {
   momentId: string;
@@ -57,7 +45,7 @@ export function LandingSkyMomentCard({
   temperature,
   units,
 }: LandingSkyMomentCardProps) {
-  const [storedMode, setStoredMode] = useState<SkyMomentVisualMode>(() => getStoredMode(momentId));
+  const [storedMode] = useSkyMomentVisualMode(momentId);
 
   const canSwap = Boolean(moodImageSrc && photoSrc);
   const activeMode = canSwap ? storedMode : moodImageSrc ? "mood" : "photo";
@@ -65,6 +53,7 @@ export function LandingSkyMomentCard({
   const secondarySrc = activeMode === "photo" ? moodImageSrc : photoSrc;
   const secondaryAlt = activeMode === "photo" ? `${cityName} weather mood` : `${cityName} sky photo`;
   const secondaryLabel = activeMode === "photo" ? "Weather mood" : "Captured for your journal";
+  const showSecondaryAccent = activeMode === "mood" && Boolean(secondarySrc);
   const surfaceOverlayClassName =
     activeMode === "photo"
       ? "absolute inset-0 bg-[linear-gradient(180deg,rgba(5,12,18,0.02)_0%,rgba(5,12,18,0.10)_36%,rgba(5,12,18,0.48)_100%)]"
@@ -102,10 +91,8 @@ export function LandingSkyMomentCard({
                   className="inline-flex h-7 shrink-0 items-center gap-1 rounded-full border border-white/16 bg-black/28 px-2 text-cloud/88 shadow-[0_8px_22px_rgba(0,0,0,0.24)] backdrop-blur-xl transition hover:bg-black/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 max-[390px]:h-6.5 max-[390px]:px-1.5"
                   title={activeMode === "mood" ? "Switch to photo view" : "Switch to mood view"}
                   onClick={() => {
-                    if (typeof window === "undefined") return;
                     const nextMode = activeMode === "mood" ? "photo" : "mood";
-                    setStoredMode(nextMode);
-                    window.localStorage.setItem(getStorageKey(momentId), nextMode);
+                    writeStoredSkyMomentVisualMode(momentId, nextMode);
                   }}
                 >
                   <span
@@ -149,7 +136,7 @@ export function LandingSkyMomentCard({
               </div>
             </div>
 
-            {secondarySrc ? (
+            {showSecondaryAccent && secondarySrc ? (
               <div className="min-w-0 justify-self-end">
                 <div className="overflow-hidden rounded-[1.15rem] border border-white/16 bg-black/24 shadow-[0_14px_34px_rgba(0,0,0,0.28)] backdrop-blur-md">
                   <div className="relative aspect-[5/6] w-[4.75rem] max-[390px]:w-[3.75rem] sm:w-[8.25rem]">
@@ -159,7 +146,7 @@ export function LandingSkyMomentCard({
                       fill
                       sizes="(min-width: 640px) 132px, 60px"
                       src={secondarySrc}
-                      unoptimized={activeMode === "mood"}
+                      unoptimized
                     />
                   </div>
                 </div>
