@@ -29,6 +29,7 @@
   [![Google Cloud Storage](https://img.shields.io/badge/Google_Cloud-Storage-4285F4?logo=googlecloud&logoColor=white)](https://cloud.google.com/storage)
   [![Groq](https://img.shields.io/badge/Groq-AI-F55036)](https://groq.com/)
   [![Vercel](https://img.shields.io/badge/Vercel-Deployed-000000?logo=vercel&logoColor=white)](https://vercel.com/)
+  [![CI](https://github.com/DeadlySatwik/IconicSkies-Next/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/DeadlySatwik/IconicSkies-Next/actions/workflows/ci.yml)
   [![License: MIT](https://img.shields.io/badge/License-MIT-2EA44F.svg)](./LICENSE)
 </div>
 
