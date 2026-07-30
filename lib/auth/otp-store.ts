@@ -2,6 +2,13 @@ import "server-only";
 
 import { deleteCache, getJsonCache, setJsonCache } from "@/lib/cache/json-cache";
 import type { OtpChannel, OtpPurpose } from "@/lib/security/validation";
+import {
+  deleteMemoryOtpChallenge,
+  getMemoryOtpChallenge,
+  storeMemoryOtpChallenge,
+  updateMemoryOtpChallenge,
+} from "./otp-memory-store";
+import { getOtpStoreProvider } from "./otp-store-provider";
 
 export type OtpChallengeRecord = {
   otpHash: string;
@@ -16,10 +23,18 @@ export type OtpChallengeRecord = {
 };
 
 export async function storeOtpChallenge(key: string, record: OtpChallengeRecord, ttlSeconds: number) {
+  if (getOtpStoreProvider() === "memory") {
+    return storeMemoryOtpChallenge(key, record);
+  }
+
   return setJsonCache(key, record, ttlSeconds);
 }
 
 export async function getOtpChallenge(key: string) {
+  if (getOtpStoreProvider() === "memory") {
+    return getMemoryOtpChallenge(key);
+  }
+
   const record = await getJsonCache<OtpChallengeRecord>(key);
   if (!record) return null;
 
@@ -32,10 +47,18 @@ export async function getOtpChallenge(key: string) {
 }
 
 export async function deleteOtpChallenge(key: string) {
+  if (getOtpStoreProvider() === "memory") {
+    return deleteMemoryOtpChallenge(key);
+  }
+
   return deleteCache(key);
 }
 
 export async function updateOtpChallenge(key: string, record: OtpChallengeRecord, ttlSeconds: number) {
+  if (getOtpStoreProvider() === "memory") {
+    return updateMemoryOtpChallenge(key, record);
+  }
+
   return setJsonCache(key, record, ttlSeconds);
 }
 

@@ -74,6 +74,9 @@ jobs:
 
       - name: Lint
         run: npm run lint
+      
+      - name: Unit tests
+        run: npx tsx --test tests/unit/otp-store.test.ts
 
       - name: Build
         run: npm run build
@@ -81,6 +84,9 @@ jobs:
       - name: End-to-end tests
         id: e2e
         run: npm run test:e2e -- --reporter=html
+        env:
+          OTP_STORE_PROVIDER: memory
+          OTP_DEV_LOG_CODES: "true"
 
       - name: Upload Playwright report
         if: steps.e2e.outcome == 'failure'
